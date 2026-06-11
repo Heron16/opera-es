@@ -122,22 +122,23 @@ function getDiasAnterioresComPendentes() {
       .map(r => r.id)
   );
 
+  // Só verifica 1 dia anterior (ontem) para as rotinas de madrugada
+  // Para outros dias verifica apenas rotinas com status sem fim
   for (let i = 0; i < 3; i++) {
     chave = getDiaAnteriorKey(chave);
     const sRotinas = getStatus('diario', chave);
     const sCorvu = getCorvuDadosDia(chave);
 
-    // Rotinas com status marcado mas sem fim
+    // Rotinas com status marcado mas sem fim (qualquer dia anterior)
     const temRotinasComStatus = Object.values(sRotinas).some(v =>
       v && v.status && !v.fim
     );
 
-    // Rotinas de madrugada (00:01, 00:30, 03:00) sem fim — ficam no dia anterior mesmo sem status
-    const temMadrugadaSemFim = [...idsMadrugada].some(id => {
+    // Rotinas de madrugada sem fim — SÓ para o dia imediatamente anterior (i===0)
+    const temMadrugadaSemFim = i === 0 && [...idsMadrugada].some(id => {
       const v = sRotinas[id];
-      // Se não tem status OU tem status mas sem fim → mantém
-      if (!v || !v.status) return true;   // sem status = não foi finalizada
-      return !v.fim;                       // com status mas sem fim
+      if (!v || !v.status) return true;
+      return !v.fim;
     });
 
     // Corvu tem pendente se alguma linha tem início mas não tem fim
