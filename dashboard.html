@@ -470,11 +470,11 @@ function buildRotinaHtml(r,p,dk,blocked,status,agora,isDiaria,badge) {
           <option value="erro"       ${st==='erro'?'selected':''}>✖ Erro</option>
         </select>`}
         <button class="btn-block ${isBlocked?'unblock':''}" onclick="toggleBlock('${p}','${r.id}','${dkk}')">${isBlocked?'🔓':'🔒'}</button>
-        ${r.campo?`<input type="text" class="turno-input campo-extra" value="${info.campoval||''}" onblur="mudarCampo('${p}','${r.id}','campoval',this.value,'${dkk}')${r.semStatus?';renderAll()':''}">`:'' }
+        ${r.campo?`<input type="text" class="turno-input campo-extra" placeholder="${r.semPlaceholder?'':r.campo}" value="${info.campoval||''}" onblur="mudarCampo('${p}','${r.id}','campoval',this.value,'${dkk}')${r.semStatus?';renderAll()':''}">`:'' }
       </div>
       ${r.campos?`<div class="rotina-actions-row" style="margin-top:4px;flex-wrap:wrap;">
         ${r.campos.map(c=>`<span class="campo-label-wrap"><span class="campo-label">${c.label}</span>
-          <input type="text" class="turno-input campo-extra" value="${info[c.k]||''}" onblur="mudarCampo('${p}','${r.id}','${c.k}',this.value,'${dkk}')${r.semStatus?';renderAll()':''}">
+          <input type="text" class="turno-input campo-extra" placeholder="${r.semPlaceholder?'':c.label}" value="${info[c.k]||''}" onblur="mudarCampo('${p}','${r.id}','${c.k}',this.value,'${dkk}')${r.semStatus?';renderAll()':''}">
         </span>`).join('')}
       </div>`:''}`;
 
