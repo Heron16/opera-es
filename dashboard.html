@@ -446,8 +446,13 @@ function buildRotinaHtml(r,p,dk,blocked,status,agora,isDiaria,badge) {
   else if(st==='encerrado')cls+=' done';
   else if(st==='executando'||isCurrent)cls+=' current';
   // rotinas semStatus ficam escuras quando qualquer campo foi preenchido
+  // se todosOsCampos:true, só fica verde quando TODOS os campos estiverem preenchidos
   else if(r.semStatus && (
-    (r.campos && r.campos.some(c => info[c.k] && info[c.k].trim() !== '')) ||
+    (r.campos && (
+      r.todosOsCampos
+        ? r.campos.every(c => info[c.k] && info[c.k].trim() !== '')
+        : r.campos.some(c => info[c.k] && info[c.k].trim() !== '')
+    )) ||
     (r.campo && info.campoval && info.campoval.trim() !== '')
   )) cls+=' done';
 
