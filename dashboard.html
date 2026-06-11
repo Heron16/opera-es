@@ -282,6 +282,13 @@ function getMovimentoHeader() {
   const dia = String(d.getDate()).padStart(2,'0');
   const mes = String(d.getMonth()+1).padStart(2,'0');
   const ano = d.getFullYear();
+  return `ROTINAS DO UNIFACE - MOVIMENTO DO DIA – ${dia}/${mes}/${ano}`;
+}
+function getMovimentoHeaderCorvu() {
+  const d = new Date();
+  const dia = String(d.getDate()).padStart(2,'0');
+  const mes = String(d.getMonth()+1).padStart(2,'0');
+  const ano = d.getFullYear();
   return `ROTINAS DO CORVU - MOVIMENTO DO DIA – ${dia}/${mes}/${ano}`;
 }
 function horaAtual() { const n=new Date(); return n.getHours()*60+n.getMinutes(); }
@@ -548,7 +555,7 @@ function renderCorvu(tabId,lista,p) {
   const comBloqueio=(p==='corvu');
   const blocked=comBloqueio?getCorvuBlocked(p):[];
 
-  let html=`<div class="movimento-header">${getMovimentoHeader()}</div><div style="overflow-x:auto;">
+  let html=`<div class="movimento-header">${getMovimentoHeaderCorvu()}</div><div style="overflow-x:auto;">
   <table class="corvu-table"><thead><tr>
     <th>Rotina</th><th>Início</th><th>Fim</th><th>Servidor</th><th>Usuário</th><th>Terminal</th>
     ${comBloqueio?'<th style="width:40px;"></th>':''}
