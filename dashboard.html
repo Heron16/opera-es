@@ -117,7 +117,12 @@ function getDiasAnterioresComPendentes() {
     const sRotinas = getStatus('diario', chave);
     // Corvu diário agora também usa chave com data
     const sCorvu = getCorvuDadosDia(chave);
-    const temRotinas = Object.values(sRotinas).some(v => v && v.status === 'executando');
+    const temRotinas = Object.values(sRotinas).some(v =>
+      v && (
+        v.status === 'executando' ||
+        (v.status === 'erro' && !v.fim)
+      )
+    );
     // Corvu tem pendente se alguma linha tem início mas não tem fim
     const temCorvu = Object.values(sCorvu).some(v => v && v.inicio && !v.fim);
     if (temRotinas || temCorvu) dias.push({ diaKey: chave, temRotinas, temCorvu });
