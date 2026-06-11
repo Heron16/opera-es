@@ -60,7 +60,12 @@ const ROTINAS_DIARIA = [
   { id:'d51', hora:'19:30', texto:'Credicoamo - Serviços Bancários\\Produção\\Rotina Diária – Risco de Crédito', obs:'Credicoamo - SbfiJ005', caminho:'Credicoamo/Serviços Bancários/Produção/Rotina Diária – Risco de Crédito', secao:'Noite' },
   { id:'d52', hora:'20:00', texto:'Credicoamo - Serviços Bancários\\Produção\\Rotina Diária Diversos – Produção', obs:'Credicoamo - SbfiJ006', caminho:'Credicoamo/Serviços Bancários/Produção/Rotina Diária Diversos – Produção', secao:'Noite' },
   { id:'d53', hora:'20:00', texto:'CreOP002 – Salva Diária Credicoamo', obs:'De segunda a sexta', caminho:'Serviço Batch/CreOP002 – Salva Diária Credicoamo', campo:'OK ___', semStatus:true, secao:'Noite' },
+  // ── Sexta-feira ─────────────────────────────────────────────────────
+  { id:'d158', hora:'19:00', texto:'Pesquisa.bat / Pesquisa_qrp.bat / Pesquisa_query.bat / Pesquisa_copy_corvuDoc.bat', obs:'F:\\Sistemas\\Corvu_docto - Executar Sexta-feira', caminho:'Serviço Batch/Pesquisa.bat / Pesquisa_qrp.bat / Pesquisa_query.bat / Pesquisa', campos:[{k:'pesquisabat',label:'pesquisa.bat'},{k:'pesquisaqrp',label:'pesquisa_qrp'},{k:'pesquisaquery',label:'pesquisa_query'},{k:'copycorvu',label:'copy_corvuDoc'}], semStatus:true, todosOsCampos:true, secao:'Noite' },
+  { id:'d159', hora:'19:00', texto:'Unifacedev05 – R10_coamo_pro_tool_BI', obs:'\\\\Coamo\\fs\\UnifaceDev\\Corporativo\\R10_coamo_pro\\Adm\\Ide 10.4 - Sexta-feira', caminho:'Serviço Batch/Unifacedev05 – R10_coamo_pro_tool_BI', campo:'BI ___', semStatus:true, secao:'Noite' },
   { id:'d54', hora:'19:00', texto:'Job Diário – Sistemas Diversos', obs:'Sistema - Após BI - GSISJ002 (Sexta-feira)', caminho:'Serviço Batch/Sistema/Job Diário – Sistemas Diversos', secao:'Noite' },
+  { id:'d160', hora:'19:00', texto:'Unifacedev05 – IDF 9.6 – Bkp Semanal', obs:'Executar Quarta-feira', caminho:'Serviço Batch/Unifacedev05 – IDF 9.6 – Bkp Semanal', secao:'Noite' },
+  { id:'d161', hora:'19:00', texto:'Unifacedev05 – IDF 9.6 – Bkp Semanal', obs:'Executar Sexta-feira', caminho:'Serviço Batch/Unifacedev05 – IDF 9.6 – Bkp Semanal', secao:'Noite' },
   { id:'d55', hora:'19:00', texto:'Rotina Batch Diária Envio de Notificação – Gestão Reclamação de Sementes', obs:'Sementes', caminho:'Serviço Batch/Sementes/Rotina Batch Diária Envio de Notificação – Gestão', secao:'Noite' },
   { id:'d56', hora:'19:00', texto:'Job Cálculo do Prêmio de Produção', obs:'Transporte', caminho:'Serviço Batch/Transporte/Job Cálculo do Prêmio de Produção', secao:'Noite' },
   { id:'d57', hora:'19:00', texto:'Rotina Diária (Metas de Fornecimentos de Insumos)', obs:'Cooperados', caminho:'Serviço Batch/Cooperados/Rotina Diária (Metas de Fornecimentos de Insumos)', secao:'Noite' },
@@ -162,12 +167,6 @@ const ROTINAS_DIARIA = [
   { id:'d147', hora:'00:01', texto:'Rotina Diária (Conciliação a Granel)', obs:'Cooperados', caminho:'Serviço Batch/Cooperados/Rotina Diária (Conciliação a Granel)', secao:'Após meia-noite' },
 
   { id:'d148', hora:'00:30', texto:'Almoxarifado / Rotina Diária', obs:'', caminho:'Serviço Batch/Almoxarifado / Rotina Diária', secao:'Após meia-noite' },
-
-  // ── Sexta-feira ─────────────────────────────────────────────────────
-  { id:'d158', hora:'19:00', texto:'Pesquisa.bat / Pesquisa_qrp.bat / Pesquisa_query.bat / Pesquisa_copy_corvuDoc.bat', obs:'F:\\Sistemas\\Corvu_docto - Executar Sexta-feira', caminho:'Serviço Batch/Pesquisa.bat / Pesquisa_qrp.bat / Pesquisa_query.bat / Pesquisa', campos:[{k:'pesquisabat',label:'pesquisa.bat'},{k:'pesquisaqrp',label:'pesquisa_qrp'},{k:'pesquisaquery',label:'pesquisa_query'},{k:'copycorvu',label:'copy_corvuDoc'}], semStatus:true, todosOsCampos:true, secao:'Noite' },
-  { id:'d159', hora:'19:00', texto:'Unifacedev05 – R10_coamo_pro_tool_BI', obs:'\\\\Coamo\\fs\\UnifaceDev\\Corporativo\\R10_coamo_pro\\Adm\\Ide 10.4 - Sexta-feira', caminho:'Serviço Batch/Unifacedev05 – R10_coamo_pro_tool_BI', campo:'BI ___', semStatus:true, secao:'Noite' },
-  { id:'d160', hora:'19:00', texto:'Unifacedev05 – IDF 9.6 – Bkp Semanal', obs:'Executar Quarta-feira', caminho:'Serviço Batch/Unifacedev05 – IDF 9.6 – Bkp Semanal', secao:'Noite' },
-  { id:'d161', hora:'19:00', texto:'Unifacedev05 – IDF 9.6 – Bkp Semanal', obs:'Executar Sexta-feira', caminho:'Serviço Batch/Unifacedev05 – IDF 9.6 – Bkp Semanal', secao:'Noite' },
 
   // ── Após 03:00h (executar após as 03:00h) ───────────────────────────
   { id:'d149', hora:'03:00', texto:'Contabilidade Diária', obs:'Administrativa/Contabilidade', caminho:'Serviço Batch/Administrativa/Contabilidade/Contabilidade Diária', secao:'Após 03:00h' },
