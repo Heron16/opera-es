@@ -153,6 +153,7 @@ const ROTINAS_DIARIA = [
   { id:'d139', hora:'00:01', texto:'Geração Diária Carteira Corvu', obs:'Financeiro/Contas a Receber', caminho:'Serviço Batch/Financeiro/Contas a Receber/Geração Diária Carteira Corvu', secao:'Após meia-noite' },
   { id:'d140', hora:'00:01', texto:'Job Diário Crural - Debcred', obs:'Financeiro/Financiamentos', caminho:'Serviço Batch/Financeiro/Financiamentos/Job Diário Crural - Debcred', secao:'Após meia-noite' },
   { id:'d141', hora:'00:01', texto:'Bloqueio Cliente Base SERPRO', obs:'Financeiro/Análise de Crédito', caminho:'Serviço Batch/Financeiro/Análise de Crédito/Bloqueio Cliente Base SERPRO', secao:'Após meia-noite' },
+  { id:'d141b', hora:'00:01', texto:'Rotina Diária Pós Meia Noite', obs:'Cooperados/Rotina Motor Crédito', caminho:'Serviço Batch/Cooperados/Rotina Motor Crédito/Rotina Diária Pós Meia Noite', secao:'Após meia-noite' },
   { id:'d142', hora:'00:01', texto:'Rotina Diária / Iniciar a Rotina', obs:'Cooperados - No mensal Pfatb129 pode cont rotina', caminho:'Serviço Batch/Cooperados/Rotina Motor Crédito/Rotina Diaria Pós Meia Noite', secao:'Após meia-noite' },
   { id:'d143', hora:'00:01', texto:'Rotina Diária (Bayer/Basf)', obs:'Cooperados', caminho:'Serviço Batch/Cooperados/Rotina Diária (Bayer/Basf)', secao:'Após meia-noite' },
   { id:'d144', hora:'00:01', texto:'Rotina Fertilizantes Corvu', obs:'Cooperados - Antes Bens Fornec. Parte 3', caminho:'Serviço Batch/Cooperados/Rotina Fertilizantes Corvu', secao:'Após meia-noite' },
