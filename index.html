@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operações - Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="login-container">
+  <div class="login-box">
+    <h1>⚙️ Operações</h1>
+    <p>Sistema de Rotinas e Escalas</p>
+    <input type="text" id="username" placeholder="Usuário" autocomplete="off">
+    <input type="password" id="password" placeholder="Senha">
+    <button class="btn-login" id="btnLogin" onclick="fazerLogin()">Entrar</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+<script>
+async function fazerLogin() {
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value;
+  const errEl  = document.getElementById('loginError');
+  const btnEl  = document.getElementById('btnLogin');
+
+  errEl.textContent = '';
+  if (!u || !p) { errEl.textContent = 'Preencha usuário e senha.'; return; }
+
+  btnEl.disabled = true;
+  btnEl.textContent = 'Entrando...';
+
+  try {
+    const resp = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: u, password: p })
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      errEl.textContent = data.erro || 'Usuário ou senha incorretos.';
+      btnEl.disabled = false;
+      btnEl.textContent = 'Entrar';
+      return;
+    }
+
+    // Salva token e dados do usuário na sessão
+    sessionStorage.setItem('token', data.token);
+    sessionStorage.setItem('user',  data.username);
+    sessionStorage.setItem('role',  data.role);
+    window.location.href = 'dashboard.html';
+
+  } catch (e) {
+    errEl.textContent = 'Erro ao conectar com o servidor.';
+    btnEl.disabled = false;
+    btnEl.textContent = 'Entrar';
+  }
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter') fazerLogin(); });
+</script>
+</body>
+</html>
