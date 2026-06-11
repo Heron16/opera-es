@@ -112,18 +112,40 @@ let abaAtiva = 'diario';
 function getDiasAnterioresComPendentes() {
   const dias = [];
   let chave = diaAtual;
+
+  // IDs das rotinas que pertencem ao dia anterior mesmo sem status
+  // (seções: Após meia-noite, Após 03:00h, Acompanhamento BI)
+  const SECOES_DIA_ANTERIOR = new Set(['Após meia-noite','Após 03:00h','Acompanhamento BI']);
+  const idsMadrugada = new Set(
+    ROTINAS_DIARIA
+      .filter(r => SECOES_DIA_ANTERIOR.has(r.secao))
+      .map(r => r.id)
+  );
+
   for (let i = 0; i < 3; i++) {
     chave = getDiaAnteriorKey(chave);
     const sRotinas = getStatus('diario', chave);
-    // Corvu diário agora também usa chave com data
     const sCorvu = getCorvuDadosDia(chave);
-    const temRotinas = Object.values(sRotinas).some(v =>
+
+    // Rotinas com status marcado mas sem fim
+    const temRotinasComStatus = Object.values(sRotinas).some(v =>
       v && v.status && !v.fim
     );
+
+    // Rotinas de madrugada (00:01, 00:30, 03:00) sem fim — ficam no dia anterior mesmo sem status
+    const temMadrugadaSemFim = [...idsMadrugada].some(id => {
+      const v = sRotinas[id];
+      // Se não tem status OU tem status mas sem fim → mantém
+      if (!v || !v.status) return true;   // sem status = não foi finalizada
+      return !v.fim;                       // com status mas sem fim
+    });
+
     // Corvu tem pendente se alguma linha tem início mas não tem fim
     const temCorvu = Object.values(sCorvu).some(v => v && v.inicio && !v.fim);
-    if (temRotinas || temCorvu) dias.push({ diaKey: chave, temRotinas, temCorvu });
-    else break;
+
+    if (temRotinasComStatus || temMadrugadaSemFim || temCorvu) {
+      dias.push({ diaKey: chave, temRotinas: temRotinasComStatus || temMadrugadaSemFim, temCorvu });
+    } else break;
   }
   return dias;
 }
