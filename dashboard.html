@@ -156,13 +156,14 @@ function getCorvuDadosDia(diaKey) {
   const k = 'corvu_dados_corvu_' + (diaKey || diaAtual);
   try { return JSON.parse(lerChave(k) || '{}'); } catch { return {}; }
 }
-function saveCorvuCampoDia(diaKey, idx, campo, val) {
+async function saveCorvuCampoDia(diaKey, idx, campo, val) {
   const k = 'corvu_dados_corvu_' + (diaKey || diaAtual);
   const d = getCorvuDadosDia(diaKey);
   if (!d[idx]) d[idx] = {};
   d[idx][campo] = val;
-  salvarChave(k, JSON.stringify(d));
-  if (USAR_API) _cache[k] = JSON.stringify(d);
+  await salvarChave(k, JSON.stringify(d));
+  _cache[k] = JSON.stringify(d);
+  atualizarIndicadorPendentes();
 }
 
 function garantirTabDinamica(diaKey) {
@@ -237,7 +238,7 @@ function renderAll() {
     const tab = document.getElementById(a);
     if (tab) {
       const [,am,ad] = dk.split('-');
-      tab.innerHTML = `<div class="movimento-header">ROTINAS DO CORVU – ${ad}/${am}</div><div id="corvu-inner-${dk}"></div>`;
+      tab.innerHTML = `<div class="movimento-header">${getMovimentoHeaderCorvu(dk)}</div><div id="corvu-inner-${dk}"></div>`;
       renderCorvuDia('corvu-inner-' + dk, ROTINAS_CORVU, dk);
     }
     return;
@@ -302,19 +303,13 @@ function getDiaAnteriorKey(key) {
   return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
 }
 function formatarDataKey(key) { const [y,m,d]=key.split('-'); return `${d}/${m}/${y}`; }
-function getMovimentoHeader() {
-  const d = new Date();
-  const dia = String(d.getDate()).padStart(2,'0');
-  const mes = String(d.getMonth()+1).padStart(2,'0');
-  const ano = d.getFullYear();
-  return `ROTINAS DO UNIFACE - MOVIMENTO DO DIA – ${dia}/${mes}/${ano}`;
+function getMovimentoHeader(diaKey) {
+  const [y,m,d] = (diaKey || diaAtual).split('-');
+  return `ROTINAS DO UNIFACE - MOVIMENTO DO DIA – ${d}/${m}/${y}`;
 }
-function getMovimentoHeaderCorvu() {
-  const d = new Date();
-  const dia = String(d.getDate()).padStart(2,'0');
-  const mes = String(d.getMonth()+1).padStart(2,'0');
-  const ano = d.getFullYear();
-  return `ROTINAS DO CORVU - MOVIMENTO DO DIA – ${dia}/${mes}/${ano}`;
+function getMovimentoHeaderCorvu(diaKey) {
+  const [y,m,d] = (diaKey || diaAtual).split('-');
+  return `ROTINAS DO CORVU - MOVIMENTO DO DIA – ${d}/${m}/${y}`;
 }
 function horaAtual() { const n=new Date(); return n.getHours()*60+n.getMinutes(); }
 function horaParaMin(h) { if(!h||!h.match(/^\d{2}:\d{2}/))return -1; const[hh,mm]=h.split(':'); return parseInt(hh)*60+parseInt(mm); }
@@ -327,6 +322,10 @@ const API_URL  = '/api/dados';
 
 // Cache local dos dados (evita leituras repetidas)
 let _cache = {};
+
+// Timestamp da última modificação local por chave
+// Impede que o polling sobrescreva dados que acabaram de ser editados localmente
+const _localTimestamp = {};
 
 // Carrega todos os dados do servidor na inicialização
 async function carregarDadosServidor() {
@@ -343,19 +342,44 @@ async function carregarDadosServidor() {
   } catch { /* servidor offline — usa localStorage */ }
 }
 
+// Fila de salvamentos pendentes para retry em caso de falha
+const _filaSalvamento = {};
+
 // Salva uma chave no servidor e no localStorage
 async function salvarChave(chave, valor) {
   const valorStr = typeof valor === 'string' ? valor : JSON.stringify(valor);
   try { localStorage.setItem(chave, valorStr); } catch {}
   if (USAR_API) _cache[chave] = valorStr;
+  // Marca o timestamp local — polling não pode sobrescrever por 10 segundos
+  _localTimestamp[chave] = Date.now();
   if (!USAR_API) return;
+  // Marca como pendente (será reenviado se falhar)
+  _filaSalvamento[chave] = valorStr;
   try {
-    await fetch(`${API_URL}/${encodeURIComponent(chave)}`, {
+    const r = await fetch(`${API_URL}/${encodeURIComponent(chave)}`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ valor: valorStr })
     });
-  } catch { /* servidor offline */ }
+    if (r.ok) {
+      delete _filaSalvamento[chave]; // removido da fila após sucesso
+    }
+  } catch { /* servidor offline — será reenviado pelo flushPendentes */ }
+}
+
+// Reenvia dados que não foram salvos no servidor (ex: conexão caiu)
+async function flushPendentes() {
+  const chaves = Object.keys(_filaSalvamento);
+  for (const chave of chaves) {
+    try {
+      const r = await fetch(`${API_URL}/${encodeURIComponent(chave)}`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ valor: _filaSalvamento[chave] })
+      });
+      if (r.ok) delete _filaSalvamento[chave];
+    } catch { break; } // servidor ainda offline, tenta na próxima
+  }
 }
 
 // Lê uma chave (do cache/localStorage)
@@ -367,10 +391,37 @@ function lerChave(chave) {
   return localStorage.getItem(chave);
 }
 
+// Indicador visual de pendentes
+function atualizarIndicadorPendentes() {
+  const qtd = Object.keys(_filaSalvamento).length;
+  let el = document.getElementById('indicadorPendentes');
+  if (!el) {
+    el = document.createElement('span');
+    el.id = 'indicadorPendentes';
+    el.style.cssText = 'font-size:0.75rem;padding:2px 6px;border-radius:10px;margin-right:6px;display:none;';
+    const badge = document.getElementById('userBadge');
+    if (badge) badge.parentNode.insertBefore(el, badge);
+  }
+  if (qtd > 0) {
+    el.style.display = 'inline';
+    el.style.background = '#fff3cd';
+    el.style.color = '#856404';
+    el.textContent = '⏳ Salvando...';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
 // Polling: atualiza dados do servidor a cada 3 segundos (quando em modo web)
+const PROTEGER_POR_MS = 15000; // ignora updates do servidor por 15s após edição local
 function iniciarPolling() {
   if (!USAR_API) return;
   setInterval(async () => {
+    // Tenta reenviar dados pendentes antes de buscar novos
+    if (Object.keys(_filaSalvamento).length > 0) {
+      await flushPendentes();
+      atualizarIndicadorPendentes();
+    }
     try {
       const r = await fetch(API_URL + '?t=' + Date.now(), {
         headers: { 'Authorization': 'Bearer ' + token }
@@ -378,10 +429,18 @@ function iniciarPolling() {
       if (r.status === 401) { sessionStorage.clear(); window.location.href = 'index.html'; return; }
       if (r.ok) {
         const novos = await r.json();
+        const agora = Date.now();
         let mudou = false;
         Object.entries(novos).forEach(([k,v]) => {
           const vStr = typeof v === 'string' ? v : JSON.stringify(v);
-          if (_cache[k] !== vStr) { _cache[k] = vStr; mudou = true; }
+          // Não sobrescreve se:
+          // 1) dado ainda está na fila de envio, OU
+          // 2) foi editado localmente há menos de 15 segundos
+          const editadoRecente = _localTimestamp[k] && (agora - _localTimestamp[k]) < PROTEGER_POR_MS;
+          if (!_filaSalvamento[k] && !editadoRecente && _cache[k] !== vStr) {
+            _cache[k] = vStr;
+            mudou = true;
+          }
         });
         if (mudou) atualizarSemPerderFoco();
       }
@@ -392,26 +451,21 @@ function iniciarPolling() {
 // Atualiza a tela sem sobrescrever campos que o usuário está editando
 function atualizarSemPerderFoco() {
   const focusado = document.activeElement;
-  // Guarda valores dos inputs com foco para restaurar depois
-  const focusId   = focusado ? focusado.id   : null;
-  const focusName = focusado ? focusado.name : null;
-  const focusVal  = focusado ? focusado.value : null;
+  const tagAtiva = focusado ? focusado.tagName : '';
+
+  // Se o usuário está digitando em algum input/textarea/select, não re-renderiza agora
+  // O próximo ciclo de polling vai atualizar quando ele sair do campo
+  if (tagAtiva === 'INPUT' || tagAtiva === 'TEXTAREA' || tagAtiva === 'SELECT') return;
 
   renderAll();
-
-  // Restaura foco e valor no campo que estava sendo editado
-  if (focusId) {
-    const el = document.getElementById(focusId);
-    if (el) { el.focus(); el.value = focusVal; }
-  }
 }
 
 // ── Funções de storage que usam a camada unificada ────────────────────
 function getStatusKey(p,dk) { return(p==='diario'||p==='fds')?'status_diaria_'+(dk||diaAtual):'status_'+p; }
 function getStatus(p,dk)    { try{return JSON.parse(lerChave(getStatusKey(p,dk))||'{}')}catch{return{}} }
-function saveStatus(p,obj,dk){ const k=getStatusKey(p,dk); salvarChave(k,JSON.stringify(obj)); if(USAR_API)_cache[k]=JSON.stringify(obj); }
+async function saveStatus(p,obj,dk){ const k=getStatusKey(p,dk); await salvarChave(k,JSON.stringify(obj)); _cache[k]=JSON.stringify(obj); atualizarIndicadorPendentes(); }
 function getBlocked(p,dk)   { const k=(p==='diario'||p==='fds')?'blocked_diaria_'+(dk||diaAtual):'blocked_'+p; try{return JSON.parse(lerChave(k)||'[]')}catch{return[]} }
-function saveBlocked(p,arr,dk){ const k=(p==='diario'||p==='fds')?'blocked_diaria_'+(dk||diaAtual):'blocked_'+p; salvarChave(k,JSON.stringify(arr)); if(USAR_API)_cache[k]=JSON.stringify(arr); }
+async function saveBlocked(p,arr,dk){ const k=(p==='diario'||p==='fds')?'blocked_diaria_'+(dk||diaAtual):'blocked_'+p; await salvarChave(k,JSON.stringify(arr)); _cache[k]=JSON.stringify(arr); atualizarIndicadorPendentes(); }
 function getCorvuDados(p) {
   // Para o corvu diário, usa chave datada para suportar dia anterior
   if (p === 'corvu') {
@@ -420,14 +474,15 @@ function getCorvuDados(p) {
   }
   try { return JSON.parse(lerChave('corvu_dados_'+p) || '{}'); } catch { return {}; }
 }
-function saveCorvuCampo(p, idx, campo, val) {
+async function saveCorvuCampo(p, idx, campo, val) {
   // Para o corvu diário, salva com chave datada
   const chave = p === 'corvu' ? 'corvu_dados_corvu_' + diaAtual : 'corvu_dados_' + p;
   const d = getCorvuDados(p);
   if (!d[idx]) d[idx] = {};
   d[idx][campo] = val;
-  salvarChave(chave, JSON.stringify(d));
-  if (USAR_API) _cache[chave] = JSON.stringify(d);
+  await salvarChave(chave, JSON.stringify(d));
+  _cache[chave] = JSON.stringify(d);
+  atualizarIndicadorPendentes();
 }
 function getCorvuBlocked(p) { try{return JSON.parse(lerChave('blocked_corvu_'+p)||'[]')}catch{return[]} }
 
@@ -438,21 +493,22 @@ function getCorvuBlocked(p) { try{return JSON.parse(lerChave('blocked_corvu_'+p)
 const podeEditarHorarios = (role === 'admin');
 
 // ── AÇÕES ─────────────────────────────────────────────────────────────
-function mudarStatus(p,id,val,dk) {
+async function mudarStatus(p,id,val,dk) {
   const s=getStatus(p,dk); if(!s[id])s[id]={};
   s[id].status=val; if(val!=='erro')s[id].msg='';
-  saveStatus(p,s,dk); renderAll();
+  await saveStatus(p,s,dk); renderAll();
 }
-function mudarCampo(p,id,campo,val,dk) {
-  const s=getStatus(p,dk); if(!s[id])s[id]={}; s[id][campo]=val; saveStatus(p,s,dk);
+async function mudarCampo(p,id,campo,val,dk) {
+  const s=getStatus(p,dk); if(!s[id])s[id]={}; s[id][campo]=val; await saveStatus(p,s,dk);
 }
-function toggleBlock(p,id,dk) {
-  let b=getBlocked(p,dk); b=b.includes(id)?b.filter(x=>x!==id):[...b,id]; saveBlocked(p,b,dk); renderAll();
+async function toggleBlock(p,id,dk) {
+  let b=getBlocked(p,dk); b=b.includes(id)?b.filter(x=>x!==id):[...b,id]; await saveBlocked(p,b,dk); renderAll();
 }
-function toggleCorvuBlock(p,idx) {
+async function toggleCorvuBlock(p,idx) {
   let b=getCorvuBlocked(p); b=b.includes(idx)?b.filter(x=>x!==idx):[...b,idx];
-  salvarChave('blocked_corvu_'+p,JSON.stringify(b));
-  if(USAR_API)_cache['blocked_corvu_'+p]=JSON.stringify(b);
+  await salvarChave('blocked_corvu_'+p,JSON.stringify(b));
+  _cache['blocked_corvu_'+p]=JSON.stringify(b);
+  atualizarIndicadorPendentes();
   renderAll();
 }
 
@@ -538,7 +594,7 @@ function renderRotinas(tabId,rotinas,p,dk) {
   // Seções que devem ser renderizadas como tabela Corvu
   const secoesCorvu = new Set(['Corvu Sábado','Corvu Domingo']);
 
-  let html=`<div class="movimento-header">${getMovimentoHeader()}</div>`;
+  let html=`<div class="movimento-header">${getMovimentoHeader(dk)}</div>`;
 
   // Bloco dia anterior — só aparece nas abas dinâmicas (tab-diario-YYYY-MM-DD), não na aba do dia atual
   // (removido daqui — tratado em renderAll para abas dinâmicas)
@@ -585,7 +641,7 @@ function renderCorvu(tabId,lista,p) {
   const comBloqueio=(p==='corvu');
   const blocked=comBloqueio?getCorvuBlocked(p):[];
 
-  let html=`<div class="movimento-header">${getMovimentoHeaderCorvu()}</div><div style="overflow-x:auto;">
+  let html=`<div class="movimento-header">${getMovimentoHeaderCorvu(diaAtual)}</div><div style="overflow-x:auto;">
   <table class="corvu-table"><thead><tr>
     <th>Rotina</th><th>Início</th><th>Fim</th><th>Servidor</th><th>Usuário</th><th>Terminal</th>
     ${comBloqueio?'<th style="width:40px;"></th>':''}
