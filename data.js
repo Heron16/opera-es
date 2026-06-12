@@ -18,6 +18,8 @@ const ROTINAS_DIARIA = [
   { id:'d14', hora:'', texto:'Arquivo de Retorno - Desbloquear Pedidos Fatpem', obs:'Financeiro/Contas a Receber', caminho:'Serviço Batch/Financeiro/Contas a Receber/Arquivo de Retorno - Desbloquear Pedidos Fatpem', secao:'Manhã' },
   { id:'d15', hora:'', texto:'Geração Arquivo Corvu', obs:'Financeiro/Contas a Receber', caminho:'Serviço Batch/Financeiro/Contas a Receber/Geração Arquivo Corvu', secao:'Manhã' },
   { id:'d16', hora:'', texto:'Diário - Bloqueio Contas a Receber', obs:'Fatpem - Não executar no sábado', caminho:'Serviço Batch/Fatpem/Diário - Bloqueio Contas a Receber', secao:'Manhã' },
+  { id:'d17', hora:'07:00', texto:'Receber arq. Cartões CIELO e GETNET', obs:'Financeiro/Contas a Receber - Receber arquivos de Cartões 07:00h', caminho:'Serviço Batch/Financeiro/Contas a Receber/Receber arq. Cartões + Carga diária Aut. Extrato', campo:'Receber arq. Cartões CIELO e GETNET ___', semStatus:true, secao:'Manhã' },
+  { id:'d25', hora:'07:00', texto:'Carga Diária Automática de Extrato Eletrônico de Cartões', obs:'Financeiro - Receber arquivos de Cartões 07:00h', caminho:'Serviço Batch/Financeiro/Contas a Receber/Carga Diária Automática Extrato Eletrônico Cartões', secao:'Manhã' },
   { id:'d18', hora:'07:00', texto:'Rotina Sincronização Download Pedidos Neogrid', obs:'Cooperados - 47-3043-7600 opção 1', caminho:'Serviço Batch/Cooperados/Rotina Sincronização Download Pedidos Neogrid', secao:'Manhã' },
   { id:'d19', hora:'07:00', texto:'Job Pgto Diário Automático', obs:'Transporte', caminho:'Serviço Batch/Transporte/Job Pgto Diário Automático', secao:'Manhã' },
   { id:'d20a', hora:'07:00', texto:'BradescoSeguros – proposta Auto/cancelados', obs:'Credicoamo Seguros', caminho:'Serviço Batch/Credicoamo Seguros/BradescoSeguros – proposta Auto/cancelados', campos:[{k:'arquivo',label:'OK / Sem arquivo'}], semStatus:true, secao:'Manhã' },
@@ -26,8 +28,8 @@ const ROTINAS_DIARIA = [
   { id:'d22', hora:'08:00', texto:'Job Diário Transporte', obs:'Transporte', caminho:'Serviço Batch/Transporte/Job Diário Transporte', secao:'Manhã' },
   { id:'d23', hora:'08:00', texto:'Conferência do Processo Contábil (Administrativo/Contabilidade)', obs:'Administrativo/Contabilidade', caminho:'Serviço Batch/Administrativa/Contabilidade/Conferência do Processo Contábil', secao:'Manhã' },
   { id:'d24', hora:'09:00', texto:'Rotina Assinatura Digital', obs:'Sementes', caminho:'Serviço Batch/Sementes/Rotina Assinatura Digital', secao:'Manhã' },
-  { id:'d17', hora:'11:00', texto:'Receber arq. Cartões + Carga diária Aut. Extrato Eletrônico Cartões (Financeiro/Contas a Receber)', obs:'Financeiro/Contas a Receber - Receber arquivos de Cartões 11:00h', caminho:'Serviço Batch/Financeiro/Contas a Receber/Receber arq. Cartões + Carga diária Aut. Extrato', campo:'Cartões OK ___', semStatus:true, secao:'Meio-dia' },
-  { id:'d25', hora:'11:00', texto:'Carga Diária Automática de Extrato Eletrônico de Cartões', obs:'Financeiro - Receber arquivos de Cartões 11:00h', caminho:'Serviço Batch/Financeiro/Contas a Receber/Carga Diária Automática Extrato Eletrônico Cartões', secao:'Meio-dia' },
+  { id:'d17b', hora:'11:00', texto:'Receber arq. Cartões CIELO e GETNET', obs:'Financeiro/Contas a Receber - Receber arquivos de Cartões 11:00h', caminho:'Serviço Batch/Financeiro/Contas a Receber/Receber arq. Cartões + Carga diária Aut. Extrato', campo:'Receber arq. Cartões CIELO e GETNET ___', semStatus:true, secao:'Meio-dia' },
+  { id:'d25b', hora:'11:00', texto:'Carga Diária Automática de Extrato Eletrônico de Cartões', obs:'Financeiro - Receber arquivos de Cartões 11:00h', caminho:'Serviço Batch/Financeiro/Contas a Receber/Carga Diária Automática Extrato Eletrônico Cartões', secao:'Meio-dia' },
   { id:'d26', hora:'11:00', texto:'Rotina Diária Unif. de Vendas para Extrato Eletrônico de Cartões (S.B.\\Financeiro\\Contas a Receber)', obs:'Financeiro', caminho:'Serviço Batch/Financeiro/Contas a Receber/Rotina Diária Unif. de Vendas para Extrato Eletrônico de Cartões', secao:'Meio-dia' },
   { id:'d27a', hora:'12:00', texto:'Job-APSs Diário - Moinho', obs:'Industrial', caminho:'Serviço Batch/Industrial/Job-APSs Diário - Moinho', secao:'Meio-dia' },
   { id:'d27b', hora:'12:00', texto:'Job-APSs Diário - Ração', obs:'Industrial', caminho:'Serviço Batch/Industrial/Job-APSs Diário - Ração', secao:'Meio-dia' },
@@ -58,7 +60,12 @@ const ROTINAS_DIARIA = [
   { id:'d51', hora:'19:30', texto:'Credicoamo - Serviços Bancários\\Produção\\Rotina Diária – Risco de Crédito', obs:'Credicoamo - SbfiJ005', caminho:'Credicoamo/Serviços Bancários/Produção/Rotina Diária – Risco de Crédito', secao:'Noite' },
   { id:'d52', hora:'20:00', texto:'Credicoamo - Serviços Bancários\\Produção\\Rotina Diária Diversos – Produção', obs:'Credicoamo - SbfiJ006', caminho:'Credicoamo/Serviços Bancários/Produção/Rotina Diária Diversos – Produção', secao:'Noite' },
   { id:'d53', hora:'20:00', texto:'CreOP002 – Salva Diária Credicoamo', obs:'De segunda a sexta', caminho:'Serviço Batch/CreOP002 – Salva Diária Credicoamo', campo:'OK ___', semStatus:true, secao:'Noite' },
+  // ── Sexta-feira ─────────────────────────────────────────────────────
+  { id:'d158', hora:'19:00', texto:'Pesquisa.bat / Pesquisa_qrp.bat / Pesquisa_query.bat / Pesquisa_copy_corvuDoc.bat', obs:'F:\\Sistemas\\Corvu_docto - Executar Sexta-feira', caminho:'Serviço Batch/Pesquisa.bat / Pesquisa_qrp.bat / Pesquisa_query.bat / Pesquisa', campos:[{k:'pesquisabat',label:'pesquisa.bat'},{k:'pesquisaqrp',label:'pesquisa_qrp'},{k:'pesquisaquery',label:'pesquisa_query'},{k:'copycorvu',label:'copy_corvuDoc'}], semStatus:true, todosOsCampos:true, secao:'Noite' },
+  { id:'d159', hora:'19:00', texto:'Unifacedev05 – R10_coamo_pro_tool_BI', obs:'\\\\Coamo\\fs\\UnifaceDev\\Corporativo\\R10_coamo_pro\\Adm\\Ide 10.4 - Sexta-feira', caminho:'Serviço Batch/Unifacedev05 – R10_coamo_pro_tool_BI', campo:'BI ___', semStatus:true, secao:'Noite' },
   { id:'d54', hora:'19:00', texto:'Job Diário – Sistemas Diversos', obs:'Sistema - Após BI - GSISJ002 (Sexta-feira)', caminho:'Serviço Batch/Sistema/Job Diário – Sistemas Diversos', secao:'Noite' },
+  { id:'d160', hora:'19:00', texto:'Unifacedev05 – IDF 9.6 – Bkp Semanal', obs:'Executar Quarta-feira', caminho:'Serviço Batch/Unifacedev05 – IDF 9.6 – Bkp Semanal', secao:'Noite' },
+  { id:'d161', hora:'19:00', texto:'Unifacedev05 – IDF 9.6 – Bkp Semanal', obs:'Executar Sexta-feira', caminho:'Serviço Batch/Unifacedev05 – IDF 9.6 – Bkp Semanal', secao:'Noite' },
   { id:'d55', hora:'19:00', texto:'Rotina Batch Diária Envio de Notificação – Gestão Reclamação de Sementes', obs:'Sementes', caminho:'Serviço Batch/Sementes/Rotina Batch Diária Envio de Notificação – Gestão', secao:'Noite' },
   { id:'d56', hora:'19:00', texto:'Job Cálculo do Prêmio de Produção', obs:'Transporte', caminho:'Serviço Batch/Transporte/Job Cálculo do Prêmio de Produção', secao:'Noite' },
   { id:'d57', hora:'19:00', texto:'Rotina Diária (Metas de Fornecimentos de Insumos)', obs:'Cooperados', caminho:'Serviço Batch/Cooperados/Rotina Diária (Metas de Fornecimentos de Insumos)', secao:'Noite' },
@@ -151,7 +158,8 @@ const ROTINAS_DIARIA = [
   { id:'d139', hora:'00:01', texto:'Geração Diária Carteira Corvu', obs:'Financeiro/Contas a Receber', caminho:'Serviço Batch/Financeiro/Contas a Receber/Geração Diária Carteira Corvu', secao:'Após meia-noite' },
   { id:'d140', hora:'00:01', texto:'Job Diário Crural - Debcred', obs:'Financeiro/Financiamentos', caminho:'Serviço Batch/Financeiro/Financiamentos/Job Diário Crural - Debcred', secao:'Após meia-noite' },
   { id:'d141', hora:'00:01', texto:'Bloqueio Cliente Base SERPRO', obs:'Financeiro/Análise de Crédito', caminho:'Serviço Batch/Financeiro/Análise de Crédito/Bloqueio Cliente Base SERPRO', secao:'Após meia-noite' },
-  { id:'d142', hora:'00:01', texto:'Rotina Diária / Iniciar a Rotina', obs:'Cooperados - No mensal Pfatb129 pode cont rotina', caminho:'Serviço Batch/Cooperados/Rotina Diária / Iniciar a Rotina', secao:'Após meia-noite' },
+  { id:'d141b', hora:'00:01', texto:'Rotina Diária Pós Meia Noite', obs:'Cooperados/Rotina Motor Crédito', caminho:'Serviço Batch/Cooperados/Rotina Motor Crédito/Rotina Diária Pós Meia Noite', secao:'Após meia-noite' },
+  { id:'d142', hora:'00:01', texto:'Rotina Diária / Iniciar a Rotina', obs:'Cooperados - No mensal Pfatb129 pode cont rotina', caminho:'Serviço Batch/Cooperados/Rotina Motor Crédito/Rotina Diaria Pós Meia Noite', secao:'Após meia-noite' },
   { id:'d143', hora:'00:01', texto:'Rotina Diária (Bayer/Basf)', obs:'Cooperados', caminho:'Serviço Batch/Cooperados/Rotina Diária (Bayer/Basf)', secao:'Após meia-noite' },
   { id:'d144', hora:'00:01', texto:'Rotina Fertilizantes Corvu', obs:'Cooperados - Antes Bens Fornec. Parte 3', caminho:'Serviço Batch/Cooperados/Rotina Fertilizantes Corvu', secao:'Após meia-noite' },
   { id:'d145', hora:'00:01', texto:'Rotina Diária (Programa Fideliza)', obs:'Cooperados - Movimento dia 10 é demorado', caminho:'Serviço Batch/Cooperados/Rotina Diária (Programa Fideliza)', secao:'Após meia-noite' },
@@ -159,12 +167,6 @@ const ROTINAS_DIARIA = [
   { id:'d147', hora:'00:01', texto:'Rotina Diária (Conciliação a Granel)', obs:'Cooperados', caminho:'Serviço Batch/Cooperados/Rotina Diária (Conciliação a Granel)', secao:'Após meia-noite' },
 
   { id:'d148', hora:'00:30', texto:'Almoxarifado / Rotina Diária', obs:'', caminho:'Serviço Batch/Almoxarifado / Rotina Diária', secao:'Após meia-noite' },
-
-  // ── Sexta-feira ─────────────────────────────────────────────────────
-  { id:'d158', hora:'19:00', texto:'Pesquisa.bat / Pesquisa_qrp.bat / Pesquisa_query.bat / Pesquisa_copy_corvuDoc.bat', obs:'F:\\Sistemas\\Corvu_docto - Executar Sexta-feira', caminho:'Serviço Batch/Pesquisa.bat / Pesquisa_qrp.bat / Pesquisa_query.bat / Pesquisa', campo:'pesquisa.bat___ pesquisa_qrp___ pesquisa_query___ copy_corvuDoc___', semStatus:true, secao:'Noite' },
-  { id:'d159', hora:'19:00', texto:'Unifacedev05 – R10_coamo_pro_tool_BI', obs:'\\\\Coamo\\fs\\UnifaceDev\\Corporativo\\R10_coamo_pro\\Adm\\Ide 10.4 - Sexta-feira', caminho:'Serviço Batch/Unifacedev05 – R10_coamo_pro_tool_BI', campo:'BI ___', semStatus:true, secao:'Noite' },
-  { id:'d160', hora:'19:00', texto:'Unifacedev05 – IDF 9.6 – Bkp Semanal', obs:'Executar Quarta-feira', caminho:'Serviço Batch/Unifacedev05 – IDF 9.6 – Bkp Semanal', secao:'Noite' },
-  { id:'d161', hora:'19:00', texto:'Unifacedev05 – IDF 9.6 – Bkp Semanal', obs:'Executar Sexta-feira', caminho:'Serviço Batch/Unifacedev05 – IDF 9.6 – Bkp Semanal', secao:'Noite' },
 
   // ── Após 03:00h (executar após as 03:00h) ───────────────────────────
   { id:'d149', hora:'03:00', texto:'Contabilidade Diária', obs:'Administrativa/Contabilidade', caminho:'Serviço Batch/Administrativa/Contabilidade/Contabilidade Diária', secao:'Após 03:00h' },
