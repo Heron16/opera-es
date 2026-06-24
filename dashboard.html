@@ -106,46 +106,42 @@ const TABS = [
 let abaAtiva = 'diario';
 
 // ── ABAS DINÂMICAS DO DIA ANTERIOR ───────────────────────────────────
-// Verifica se há rotinas ou corvus do dia anterior ainda em execução
+// Verifica se há rotinas ou corvus do dia anterior com status registrado
 // e cria/remove abas dinâmicas conforme necessário
+
+// Seções que pertencem ao dia anterior (madrugada executada após virar o dia)
+const SECOES_DIA_ANTERIOR = new Set(['Após meia-noite','Após 03:00h','Acompanhamento BI']);
 
 function getDiasAnterioresComPendentes() {
   const dias = [];
   let chave = diaAtual;
 
-  // IDs das rotinas que pertencem ao dia anterior mesmo sem status
-  // (seções: Após meia-noite, Após 03:00h, Acompanhamento BI)
-  const SECOES_DIA_ANTERIOR = new Set(['Após meia-noite','Após 03:00h','Acompanhamento BI']);
+  // IDs das rotinas de madrugada (seções que pertencem ao dia anterior)
   const idsMadrugada = new Set(
     ROTINAS_DIARIA
       .filter(r => SECOES_DIA_ANTERIOR.has(r.secao))
       .map(r => r.id)
   );
 
-  // Só verifica 1 dia anterior (ontem) para as rotinas de madrugada
-  // Para outros dias verifica apenas rotinas com status sem fim
   for (let i = 0; i < 3; i++) {
     chave = getDiaAnteriorKey(chave);
     const sRotinas = getStatus('diario', chave);
     const sCorvu = getCorvuDadosDia(chave);
 
-    // Rotinas com status marcado mas sem fim (qualquer dia anterior)
-    const temRotinasComStatus = Object.values(sRotinas).some(v =>
-      v && v.status && !v.fim
-    );
+    // Rotinas com qualquer status marcado (inclui encerradas/erro — para não sumir inicio/fim/chamado)
+    const temRotinasComStatus = Object.values(sRotinas).some(v => v && v.status);
 
-    // Rotinas de madrugada sem fim — SÓ para o dia imediatamente anterior (i===0)
-    const temMadrugadaSemFim = i === 0 && [...idsMadrugada].some(id => {
+    // Rotinas de madrugada com status — SÓ para o dia imediatamente anterior (i===0)
+    const temMadrugadaComStatus = i === 0 && [...idsMadrugada].some(id => {
       const v = sRotinas[id];
-      if (!v || !v.status) return true;
-      return !v.fim;
+      return v && v.status; // qualquer status (executando, encerrado, erro)
     });
 
-    // Corvu tem pendente se alguma linha tem início mas não tem fim
-    const temCorvu = Object.values(sCorvu).some(v => v && v.inicio && !v.fim);
+    // Corvu tem dados se alguma linha tem início registrado (bloqueadas inclusive — mantém histórico)
+    const temCorvu = Object.values(sCorvu).some(v => v && v.inicio);
 
-    if (temRotinasComStatus || temMadrugadaSemFim || temCorvu) {
-      dias.push({ diaKey: chave, temRotinas: temRotinasComStatus || temMadrugadaSemFim, temCorvu });
+    if (temRotinasComStatus || temMadrugadaComStatus || temCorvu) {
+      dias.push({ diaKey: chave, temRotinas: temRotinasComStatus || temMadrugadaComStatus, temCorvu });
     } else break;
   }
   return dias;
@@ -256,8 +252,15 @@ function renderAll() {
 function exportarPDF() {
   const nomes = { diario:'Diaria', corvudiario:'Corvu_Diario', fds:'Final_de_Semana',
                   mensal:'Mensal', corvumensal:'Corvu_Mensal', unimed:'Unimed', serasa:'Serasa' };
-  const [y,m,d] = diaAtual.split('-');
-  const nomePDF = `${nomes[abaAtiva]||abaAtiva}_${d}-${m}-${y}`;
+
+  // Para abas dinâmicas do dia anterior, usa a data da aba, não diaAtual
+  let dkPDF = diaAtual;
+  if (abaAtiva.startsWith('tab-diario-')) dkPDF = abaAtiva.replace('tab-diario-', '');
+  else if (abaAtiva.startsWith('tab-corvu-')) dkPDF = abaAtiva.replace('tab-corvu-', '');
+
+  const [y,m,d] = dkPDF.split('-');
+  const nomeAba = nomes[abaAtiva] || (abaAtiva.startsWith('tab-diario-') ? 'Diaria' : abaAtiva.startsWith('tab-corvu-') ? 'Corvu_Diario' : abaAtiva);
+  const nomePDF = `${nomeAba}_${d}-${m}-${y}`;
   document.title = nomePDF;
 
   const tabAtiva = document.querySelector('.tab-content.active');
@@ -588,21 +591,26 @@ function buildRotinaHtml(r,p,dk,blocked,status,agora,isDiaria,badge) {
 // ── RENDER ROTINAS ────────────────────────────────────────────────────
 function renderRotinas(tabId,rotinas,p,dk) {
   const tab=document.getElementById('tab-'+tabId);
-  const blocked=getBlocked(p,dk), status=getStatus(p,dk), agora=horaAtual();
+  const agora=horaAtual();
   const isDiaria=(p==='diario'||p==='fds');
+
+  // Para a aba diária principal, rotinas de madrugada usam o dia anterior como chave
+  const dkMadrugada = (p === 'diario' && dk === diaAtual) ? getDiaAnteriorKey(diaAtual) : dk;
 
   // Seções que devem ser renderizadas como tabela Corvu
   const secoesCorvu = new Set(['Corvu Sábado','Corvu Domingo']);
 
   let html=`<div class="movimento-header">${getMovimentoHeader(dk)}</div>`;
 
-  // Bloco dia anterior — só aparece nas abas dinâmicas (tab-diario-YYYY-MM-DD), não na aba do dia atual
-  // (removido daqui — tratado em renderAll para abas dinâmicas)
-
   const secoes={};
   rotinas.forEach(r=>{ if(!secoes[r.secao])secoes[r.secao]=[]; secoes[r.secao].push(r); });
 
   Object.entries(secoes).forEach(([sec,items])=>{
+    // Decide qual chave de data usar para esta seção
+    const dkSec = (SECOES_DIA_ANTERIOR.has(sec) && p === 'diario' && dk === diaAtual) ? dkMadrugada : dk;
+    const blocked=getBlocked(p,dkSec);
+    const status=getStatus(p,dkSec);
+
     if(secoesCorvu.has(sec)) {
       // Renderiza como tabela Corvu inline
       const corvuPrefix = 'corvufds_' + sec.replace(/\s+/g,'_').toLowerCase();
@@ -615,7 +623,8 @@ function renderRotinas(tabId,rotinas,p,dk) {
       items.forEach((r,idx)=>{
         const d=dados[idx]||{};
         html+=`<tr>
-          <td class="corvu-nome">${r.texto}</td>          <td><input type="time" class="corvu-input" value="${d.inicio||''}" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'inicio',this.value)"></td>
+          <td class="corvu-nome">${r.texto}</td>
+          <td><input type="time" class="corvu-input" value="${d.inicio||''}" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'inicio',this.value)"></td>
           <td><input type="time" class="corvu-input" value="${d.fim||''}" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'fim',this.value)"></td>
           <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'servidor',this.value)"></td>
           <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'usuario',this.value)"></td>
@@ -624,9 +633,14 @@ function renderRotinas(tabId,rotinas,p,dk) {
       });
       html+=`</tbody></table></div></div>`;
     } else {
+      // Mostra label de data anterior no cabeçalho da seção quando necessário
+      const labelDataAnt = (dkSec !== dk && dkSec)
+        ? ` <span style="font-size:0.75rem;color:#856404;background:#fff8e1;border:1px solid #f0c040;border-radius:4px;padding:1px 6px;margin-left:6px;">📅 ${formatarDataKey(dkSec)}</span>`
+        : '';
+
       // Renderiza como rotinas normais
-      html+=`<div class="rotina-section"><h3>${sec}</h3>`;
-      items.forEach(r=>{ html+=buildRotinaHtml(r,p,dk,blocked,status,agora,isDiaria,null); });
+      html+=`<div class="rotina-section"><h3>${sec}${labelDataAnt}</h3>`;
+      items.forEach(r=>{ html+=buildRotinaHtml(r,p,dkSec,blocked,status,agora,isDiaria,null); });
       html+=`</div>`;
     }
   });
@@ -669,28 +683,44 @@ function renderCorvu(tabId,lista,p) {
 function renderCorvuDia(containerId, lista, diaKey) {
   const tab = document.getElementById('tab-' + containerId) || document.getElementById(containerId);
   if (!tab) return;
-  const chave = 'corvu_dados_corvu_' + diaKey;
+  const chaveCorvu = 'corvu_dados_corvu_' + diaKey;
+  const chaveBlocked = 'blocked_corvu_dia_' + diaKey;
   let dados = {};
-  try { dados = JSON.parse(lerChave(chave) || '{}'); } catch {}
+  let blocked = [];
+  try { dados = JSON.parse(lerChave(chaveCorvu) || '{}'); } catch {}
+  try { blocked = JSON.parse(lerChave(chaveBlocked) || '[]'); } catch {}
 
   let html = `<div style="overflow-x:auto;"><table class="corvu-table"><thead><tr>
-    <th>Rotina</th><th>Início</th><th>Fim</th><th>Servidor</th><th>Usuário</th><th>Terminal</th>
+    <th>Rotina</th><th>Início</th><th>Fim</th><th>Servidor</th><th>Usuário</th><th>Terminal</th><th style="width:40px;"></th>
   </tr></thead><tbody>`;
 
   lista.forEach((item, idx) => {
     const nome = typeof item === 'string' ? item : item.nome;
     const d = dados[idx] || {};
-    html += `<tr>
-      <td class="corvu-nome">${nome}</td>
-      <td><input type="time" class="corvu-input" value="${d.inicio||''}" onblur="saveCorvuCampoDia('${diaKey}',${idx},'inicio',this.value)"></td>
-      <td><input type="time" class="corvu-input" value="${d.fim||''}" onblur="saveCorvuCampoDia('${diaKey}',${idx},'fim',this.value)"></td>
-      <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampoDia('${diaKey}',${idx},'servidor',this.value)"></td>
-      <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampoDia('${diaKey}',${idx},'usuario',this.value)"></td>
-      <td><input type="text" class="corvu-input upper" placeholder="Terminal" value="${d.terminal||''}" oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampoDia('${diaKey}',${idx},'terminal',this.value)"></td>
+    const isB = blocked.includes(idx);
+    html += `<tr${isB ? ' class="corvu-bloqueada"' : ''}>
+      <td class="corvu-nome">${nome}${isB ? '<span class="badge-bloqueada">BLOQUEADA</span>' : ''}</td>
+      <td><input type="time" class="corvu-input" value="${d.inicio||''}" ${isB?'disabled':''} onblur="saveCorvuCampoDia('${diaKey}',${idx},'inicio',this.value)"></td>
+      <td><input type="time" class="corvu-input" value="${d.fim||''}" ${isB?'disabled':''} onblur="saveCorvuCampoDia('${diaKey}',${idx},'fim',this.value)"></td>
+      <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampoDia('${diaKey}',${idx},'servidor',this.value)"></td>
+      <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampoDia('${diaKey}',${idx},'usuario',this.value)"></td>
+      <td><input type="text" class="corvu-input upper" placeholder="Terminal" value="${d.terminal||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampoDia('${diaKey}',${idx},'terminal',this.value)"></td>
+      <td><button class="btn-block ${isB?'unblock':''}" onclick="toggleCorvuBlockDia('${diaKey}',${idx})">${isB?'🔓':'🔒'}</button></td>
     </tr>`;
   });
   html += `</tbody></table></div>`;
   tab.innerHTML = html;
+}
+
+async function toggleCorvuBlockDia(diaKey, idx) {
+  const chave = 'blocked_corvu_dia_' + diaKey;
+  let blocked = [];
+  try { blocked = JSON.parse(lerChave(chave) || '[]'); } catch {}
+  blocked = blocked.includes(idx) ? blocked.filter(x => x !== idx) : [...blocked, idx];
+  await salvarChave(chave, JSON.stringify(blocked));
+  _cache[chave] = JSON.stringify(blocked);
+  atualizarIndicadorPendentes();
+  renderAll();
 }
 
 // ── RELÓGIO ───────────────────────────────────────────────────────────
