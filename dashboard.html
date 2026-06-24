@@ -591,11 +591,8 @@ function buildRotinaHtml(r,p,dk,blocked,status,agora,isDiaria,badge) {
 // ── RENDER ROTINAS ────────────────────────────────────────────────────
 function renderRotinas(tabId,rotinas,p,dk) {
   const tab=document.getElementById('tab-'+tabId);
-  const agora=horaAtual();
+  const blocked=getBlocked(p,dk), status=getStatus(p,dk), agora=horaAtual();
   const isDiaria=(p==='diario'||p==='fds');
-
-  // Para a aba diária principal, rotinas de madrugada usam o dia anterior como chave
-  const dkMadrugada = (p === 'diario' && dk === diaAtual) ? getDiaAnteriorKey(diaAtual) : dk;
 
   // Seções que devem ser renderizadas como tabela Corvu
   const secoesCorvu = new Set(['Corvu Sábado','Corvu Domingo']);
@@ -606,11 +603,6 @@ function renderRotinas(tabId,rotinas,p,dk) {
   rotinas.forEach(r=>{ if(!secoes[r.secao])secoes[r.secao]=[]; secoes[r.secao].push(r); });
 
   Object.entries(secoes).forEach(([sec,items])=>{
-    // Decide qual chave de data usar para esta seção
-    const dkSec = (SECOES_DIA_ANTERIOR.has(sec) && p === 'diario' && dk === diaAtual) ? dkMadrugada : dk;
-    const blocked=getBlocked(p,dkSec);
-    const status=getStatus(p,dkSec);
-
     if(secoesCorvu.has(sec)) {
       // Renderiza como tabela Corvu inline
       const corvuPrefix = 'corvufds_' + sec.replace(/\s+/g,'_').toLowerCase();
@@ -633,14 +625,9 @@ function renderRotinas(tabId,rotinas,p,dk) {
       });
       html+=`</tbody></table></div></div>`;
     } else {
-      // Mostra label de data anterior no cabeçalho da seção quando necessário
-      const labelDataAnt = (dkSec !== dk && dkSec)
-        ? ` <span style="font-size:0.75rem;color:#856404;background:#fff8e1;border:1px solid #f0c040;border-radius:4px;padding:1px 6px;margin-left:6px;">📅 ${formatarDataKey(dkSec)}</span>`
-        : '';
-
       // Renderiza como rotinas normais
-      html+=`<div class="rotina-section"><h3>${sec}${labelDataAnt}</h3>`;
-      items.forEach(r=>{ html+=buildRotinaHtml(r,p,dkSec,blocked,status,agora,isDiaria,null); });
+      html+=`<div class="rotina-section"><h3>${sec}</h3>`;
+      items.forEach(r=>{ html+=buildRotinaHtml(r,p,dk,blocked,status,agora,isDiaria,null); });
       html+=`</div>`;
     }
   });
