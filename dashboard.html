@@ -73,8 +73,7 @@
 <div id="tab-fds"         class="tab-content"></div>
 <div id="tab-mensal"      class="tab-content"></div>
 <div id="tab-corvumensal" class="tab-content"></div>
-<div id="tab-unimed"      class="tab-content"></div>
-<div id="tab-serasa"      class="tab-content"></div>
+<div id="tab-anual"       class="tab-content"></div>
 
 <script src="data.js"></script>
 <script>
@@ -100,8 +99,7 @@ const TABS = [
   { id:'fds',         label:'📆 Final de Semana' },
   { id:'mensal',      label:'📅 Mensal'           },
   { id:'corvumensal', label:'🖥️ Corvu Mensal'    },
-  { id:'unimed',      label:'🏥 Unimed'           },
-  { id:'serasa',      label:'🔍 Serasa'           },
+  { id:'anual',       label:'📆 Anual'            },
 ];
 let abaAtiva = 'diario';
 
@@ -245,13 +243,12 @@ function renderAll() {
   if(a==='fds')         renderRotinas('fds',         ROTINAS_FDS_NOVO,     'fds',         diaAtual);
   if(a==='mensal')      renderRotinas('mensal',      ROTINAS_MENSAL,       'mensal',      null);
   if(a==='corvumensal') renderCorvu('corvumensal',   ROTINAS_CORVU_MENSAL, 'corvumensal');
-  if(a==='unimed')      renderRotinas('unimed',      ROTINAS_UNIMED,       'unimed',      null);
-  if(a==='serasa')      renderRotinas('serasa',      ROTINAS_SERASA,       'serasa',      null);
+  if(a==='anual')       renderRotinas('anual',       ROTINAS_ANUAIS,       'anual',       null);
 }
 
 function exportarPDF() {
   const nomes = { diario:'Diaria', corvudiario:'Corvu_Diario', fds:'Final_de_Semana',
-                  mensal:'Mensal', corvumensal:'Corvu_Mensal', unimed:'Unimed', serasa:'Serasa' };
+                  mensal:'Mensal', corvumensal:'Corvu_Mensal', anual:'Anual' };
 
   // Para abas dinâmicas do dia anterior, usa a data da aba, não diaAtual
   let dkPDF = diaAtual;
@@ -313,6 +310,18 @@ function getMovimentoHeader(diaKey) {
 function getMovimentoHeaderCorvu(diaKey) {
   const [y,m,d] = (diaKey || diaAtual).split('-');
   return `ROTINAS DO CORVU - MOVIMENTO DO DIA – ${d}/${m}/${y}`;
+}
+function getMovimentoHeaderCorvuMensal(diaKey) {
+  const [y,m,d] = (diaKey || diaAtual).split('-');
+  return `CORVU – MENSAL – ${d}/${m}/${y}`;
+}
+function getMovimentoHeaderMensal(diaKey) {
+  const [y,m,d] = (diaKey || diaAtual).split('-');
+  return `UNIFACE MENSAL – ${d}/${m}/${y}`;
+}
+function getMovimentoHeaderAnual(diaKey) {
+  const [y,m,d] = (diaKey || diaAtual).split('-');
+  return `UNIFACE ANUAL – ${d}/${m}/${y}`;
 }
 function horaAtual() { const n=new Date(); return n.getHours()*60+n.getMinutes(); }
 function horaParaMin(h) { if(!h||!h.match(/^\d{2}:\d{2}/))return -1; const[hh,mm]=h.split(':'); return parseInt(hh)*60+parseInt(mm); }
@@ -504,6 +513,51 @@ async function mudarStatus(p,id,val,dk) {
 async function mudarCampo(p,id,campo,val,dk) {
   const s=getStatus(p,dk); if(!s[id])s[id]={}; s[id][campo]=val; await saveStatus(p,s,dk);
 }
+
+// Salva hora e re-renderiza (para refletir o estado done quando fim é preenchido)
+async function mudarCampoHora(p,id,campo,val,dk) {
+  const s=getStatus(p,dk); if(!s[id])s[id]={}; s[id][campo]=val; await saveStatus(p,s,dk); renderAll();
+}
+
+// TAB nos campos de hora: preenche com horário atual se campo estiver vazio
+function _preencherHoraAtual(input) {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  input.value = hh + ':' + mm;
+}
+function _avancarFoco(input) {
+  const inputs = [...document.querySelectorAll('input:not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled])')];
+  const idx = inputs.indexOf(input);
+  if(idx >= 0 && idx < inputs.length - 1) inputs[idx+1].focus();
+}
+
+function autoHoraTab(event,input,p,id,campo,dk) {
+  if(event.key !== 'Tab') return;
+  if(input.value && input.value.trim() !== '') return; // já tem valor, não sobrescreve
+  event.preventDefault();
+  _preencherHoraAtual(input);
+  mudarCampoHora(p,id,campo,input.value,dk);
+  _avancarFoco(input);
+}
+
+function autoHoraTabCorvu(event,input,p,idx,campo) {
+  if(event.key !== 'Tab') return;
+  if(input.value && input.value.trim() !== '') return;
+  event.preventDefault();
+  _preencherHoraAtual(input);
+  saveCorvuCampo(p,idx,campo,input.value);
+  _avancarFoco(input);
+}
+
+function autoHoraTabCorvuDia(event,input,diaKey,idx,campo) {
+  if(event.key !== 'Tab') return;
+  if(input.value && input.value.trim() !== '') return;
+  event.preventDefault();
+  _preencherHoraAtual(input);
+  saveCorvuCampoDia(diaKey,idx,campo,input.value);
+  _avancarFoco(input);
+}
 async function toggleBlock(p,id,dk) {
   let b=getBlocked(p,dk); b=b.includes(id)?b.filter(x=>x!==id):[...b,id]; await saveBlocked(p,b,dk); renderAll();
 }
@@ -527,7 +581,8 @@ function buildRotinaHtml(r,p,dk,blocked,status,agora,isDiaria,badge) {
   let cls='rotina-item';
   if(isBlocked)cls+=' blocked';
   else if(st==='erro')cls+=' erro';
-  else if(st==='encerrado')cls+=' done';
+  // done: encerrado E com horário de fim preenchido
+  else if(st==='encerrado' && info.fim && info.fim.trim()!=='')cls+=' done';
   else if(st==='executando'||isCurrent)cls+=' current';
   // rotinas semStatus ficam escuras quando qualquer campo foi preenchido
   // se todosOsCampos:true, só fica verde quando TODOS os campos estiverem preenchidos
@@ -558,22 +613,30 @@ function buildRotinaHtml(r,p,dk,blocked,status,agora,isDiaria,badge) {
           <option value="encerrado"  ${st==='encerrado'?'selected':''}>✔ Encerrado</option>
           <option value="erro"       ${st==='erro'?'selected':''}>✖ Erro</option>
         </select>`}
-        <button class="btn-block ${isBlocked?'unblock':''}" onclick="toggleBlock('${p}','${r.id}','${dkk}')">${isBlocked?'🔓':'🔒'}</button>
-        ${r.campo?`<input type="text" class="turno-input campo-extra" placeholder="${r.semPlaceholder?'':r.campo}" value="${info.campoval||''}" onblur="mudarCampo('${p}','${r.id}','campoval',this.value,'${dkk}')${r.semStatus?';renderAll()':''}">`:'' }
+        ${r.campo?`<input type="text" class="campo-extra" placeholder="${r.campo}" value="${info.campoval||''}" onblur="mudarCampo('${p}','${r.id}','campoval',this.value,'${dkk}')${r.semStatus?';renderAll()':''}">`:'' }
+        ${!r.campos ? `<button class="btn-block ${isBlocked?'unblock':''}" onclick="toggleBlock('${p}','${r.id}','${dkk}')" title="${isBlocked?'Desbloquear':'Bloquear'}">${isBlocked?'🔓':'🔒'}</button>` : ''}
       </div>
-      ${r.campos?`<div class="rotina-actions-row" style="margin-top:4px;flex-wrap:wrap;">
-        ${r.campos.map(c=>`<span class="campo-label-wrap"><span class="campo-label">${c.label}</span>
-          <input type="text" class="turno-input campo-extra" placeholder="${r.semPlaceholder?'':c.label}" value="${info[c.k]||''}" onblur="mudarCampo('${p}','${r.id}','${c.k}',this.value,'${dkk}')${r.semStatus?';renderAll()':''}">
-        </span>`).join('')}
+      ${r.campos?`<div class="rotina-campos-wrap">
+        ${r.campos.slice(0, -1).map(c=>`<div class="campo-label-wrap">
+          <span class="campo-label">${c.label}:</span>
+          <input type="text" class="campo-extra" placeholder="${c.label}" value="${info[c.k]||''}" onblur="mudarCampo('${p}','${r.id}','${c.k}',this.value,'${dkk}')${r.semStatus?';renderAll()':''}">
+        </div>`).join('')}
+        <div class="rotina-campos-ultima">
+          <span class="campo-label">${r.campos[r.campos.length-1].label}:</span>
+          <input type="text" class="campo-extra" placeholder="${r.campos[r.campos.length-1].label}" value="${info[r.campos[r.campos.length-1].k]||''}" onblur="mudarCampo('${p}','${r.id}','${r.campos[r.campos.length-1].k}',this.value,'${dkk}')${r.semStatus?';renderAll()':''}">
+          <button class="btn-block ${isBlocked?'unblock':''}" onclick="toggleBlock('${p}','${r.id}','${dkk}')" title="${isBlocked?'Desbloquear':'Bloquear'}">${isBlocked?'🔓':'🔒'}</button>
+        </div>
       </div>`:''}`;
 
   if(isDiaria && !r.semStatus) {
     const showI=(st==='executando'||st==='encerrado'||st==='erro');
     const showF=(st==='encerrado'||st==='erro');
-    if(showI||showF) html+=`<div class="rotina-actions-row hora-row" style="margin-top:5px;">`;
-    if(showI) html+=`<span class="hora-label">Início</span><input type="time" class="turno-input hora-input" value="${info.inicio||''}" onblur="mudarCampo('${p}','${r.id}','inicio',this.value,'${dkk}')">`;
-    if(showF) html+=`<span class="hora-label">Fim</span><input type="time" class="turno-input hora-input" value="${info.fim||''}" onblur="mudarCampo('${p}','${r.id}','fim',this.value,'${dkk}')">`;
-    if(showI||showF) html+=`</div>`;
+    if(showI||showF) {
+      html+=`<div class="rotina-actions-row hora-row" style="margin-top:3px;">`;
+      if(showI) html+=`<span class="hora-label">Início</span><input type="time" class="hora-input" value="${info.inicio||''}" onblur="mudarCampoHora('${p}','${r.id}','inicio',this.value,'${dkk}')" onkeydown="autoHoraTab(event,this,'${p}','${r.id}','inicio','${dkk}')">`;
+      if(showF) html+=`<span class="hora-label">Fim</span><input type="time" class="hora-input" value="${info.fim||''}" onblur="mudarCampoHora('${p}','${r.id}','fim',this.value,'${dkk}')" onkeydown="autoHoraTab(event,this,'${p}','${r.id}','fim','${dkk}')">`;
+      html+=`</div>`;
+    }
   }
 
   if(st==='erro') html+=`
@@ -597,7 +660,11 @@ function renderRotinas(tabId,rotinas,p,dk) {
   // Seções que devem ser renderizadas como tabela Corvu
   const secoesCorvu = new Set(['Corvu Sábado','Corvu Domingo']);
 
-  let html=`<div class="movimento-header">${getMovimentoHeader(dk)}</div>`;
+  let html=`<div class="movimento-header">${
+    p==='mensal' ? getMovimentoHeaderMensal(dk) :
+    p==='anual'  ? getMovimentoHeaderAnual(dk)  :
+    getMovimentoHeader(dk)
+  }</div>`;
 
   const secoes={};
   rotinas.forEach(r=>{ if(!secoes[r.secao])secoes[r.secao]=[]; secoes[r.secao].push(r); });
@@ -616,8 +683,8 @@ function renderRotinas(tabId,rotinas,p,dk) {
         const d=dados[idx]||{};
         html+=`<tr>
           <td class="corvu-nome">${r.texto}</td>
-          <td><input type="time" class="corvu-input" value="${d.inicio||''}" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'inicio',this.value)"></td>
-          <td><input type="time" class="corvu-input" value="${d.fim||''}" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'fim',this.value)"></td>
+          <td><input type="time" class="corvu-input" value="${d.inicio||''}" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'inicio',this.value)" onkeydown="autoHoraTabCorvu(event,this,'${corvuPrefix}',${idx},'inicio')"></td>
+          <td><input type="time" class="corvu-input" value="${d.fim||''}" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'fim',this.value)" onkeydown="autoHoraTabCorvu(event,this,'${corvuPrefix}',${idx},'fim')"></td>
           <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'servidor',this.value)"></td>
           <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'usuario',this.value)"></td>
           <td><input type="text" class="corvu-input upper" placeholder="Terminal" value="${d.terminal||''}" oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'terminal',this.value)"></td>
@@ -636,26 +703,42 @@ function renderRotinas(tabId,rotinas,p,dk) {
 
 // ── RENDER CORVU ──────────────────────────────────────────────────────
 function renderCorvu(tabId,lista,p) {
-  // Suporta tanto IDs com prefixo 'tab-' quanto IDs diretos
   const tab = document.getElementById('tab-'+tabId) || document.getElementById(tabId);
   const dados=getCorvuDados(p);
   const comBloqueio=(p==='corvu');
   const blocked=comBloqueio?getCorvuBlocked(p):[];
+  const isMenual=(p==='corvumensal');
 
-  let html=`<div class="movimento-header">${getMovimentoHeaderCorvu(diaAtual)}</div><div style="overflow-x:auto;">
+  // Cabeçalho: Corvu Diário usa data atual, Corvu Mensal usa título mensal
+  const cabecalho = isMenual
+    ? getMovimentoHeaderCorvuMensal(diaAtual)
+    : getMovimentoHeaderCorvu(diaAtual);
+
+  let html=`<div class="movimento-header">${cabecalho}</div>`;
+
+  // Aviso especial para o Corvu Mensal
+  if(isMenual) {
+    html+=`<div class="aviso-corvu-mensal">⚠️ Executar somente após atualizar a data mensal do IEPA</div>`;
+  }
+
+  html+=`<div style="overflow-x:auto;">
   <table class="corvu-table"><thead><tr>
-    <th>Rotina</th><th>Início</th><th>Fim</th><th>Servidor</th><th>Usuário</th><th>Terminal</th>
+    <th>Rotina</th>
+    ${isMenual?'<th>Observação</th>':''}
+    <th>Início</th><th>Fim</th><th>Servidor</th><th>Usuário</th><th>Terminal</th>
     ${comBloqueio?'<th style="width:40px;"></th>':''}
   </tr></thead><tbody>`;
 
   lista.forEach((item,idx)=>{
     const nome=typeof item==='string'?item:item.nome;
+    const obs=typeof item==='object'&&item.obs?item.obs:'';
     const d=dados[idx]||{};
     const isB=blocked.includes(idx);
     html+=`<tr${isB?' class="corvu-bloqueada"':''}>
       <td class="corvu-nome">${nome}${isB?'<span class="badge-bloqueada">BLOQUEADA</span>':''}</td>
-      <td><input type="time" class="corvu-input" value="${d.inicio||''}" ${isB?'disabled':''} onblur="saveCorvuCampo('${p}',${idx},'inicio',this.value)"></td>
-      <td><input type="time" class="corvu-input" value="${d.fim||''}" ${isB?'disabled':''} onblur="saveCorvuCampo('${p}',${idx},'fim',this.value)"></td>
+      ${isMenual?`<td class="corvu-obs-cell">${obs}</td>`:''}
+      <td><input type="time" class="corvu-input" value="${d.inicio||''}" ${isB?'disabled':''} onblur="saveCorvuCampo('${p}',${idx},'inicio',this.value)" onkeydown="autoHoraTabCorvu(event,this,'${p}',${idx},'inicio')"></td>
+      <td><input type="time" class="corvu-input" value="${d.fim||''}" ${isB?'disabled':''} onblur="saveCorvuCampo('${p}',${idx},'fim',this.value)" onkeydown="autoHoraTabCorvu(event,this,'${p}',${idx},'fim')"></td>
       <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampo('${p}',${idx},'servidor',this.value)"></td>
       <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampo('${p}',${idx},'usuario',this.value)"></td>
       <td><input type="text" class="corvu-input upper" placeholder="Terminal" value="${d.terminal||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampo('${p}',${idx},'terminal',this.value)"></td>
@@ -687,8 +770,8 @@ function renderCorvuDia(containerId, lista, diaKey) {
     const isB = blocked.includes(idx);
     html += `<tr${isB ? ' class="corvu-bloqueada"' : ''}>
       <td class="corvu-nome">${nome}${isB ? '<span class="badge-bloqueada">BLOQUEADA</span>' : ''}</td>
-      <td><input type="time" class="corvu-input" value="${d.inicio||''}" ${isB?'disabled':''} onblur="saveCorvuCampoDia('${diaKey}',${idx},'inicio',this.value)"></td>
-      <td><input type="time" class="corvu-input" value="${d.fim||''}" ${isB?'disabled':''} onblur="saveCorvuCampoDia('${diaKey}',${idx},'fim',this.value)"></td>
+      <td><input type="time" class="corvu-input" value="${d.inicio||''}" ${isB?'disabled':''} onblur="saveCorvuCampoDia('${diaKey}',${idx},'inicio',this.value)" onkeydown="autoHoraTabCorvuDia(event,this,'${diaKey}',${idx},'inicio')"></td>
+      <td><input type="time" class="corvu-input" value="${d.fim||''}" ${isB?'disabled':''} onblur="saveCorvuCampoDia('${diaKey}',${idx},'fim',this.value)" onkeydown="autoHoraTabCorvuDia(event,this,'${diaKey}',${idx},'fim')"></td>
       <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampoDia('${diaKey}',${idx},'servidor',this.value)"></td>
       <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampoDia('${diaKey}',${idx},'usuario',this.value)"></td>
       <td><input type="text" class="corvu-input upper" placeholder="Terminal" value="${d.terminal||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampoDia('${diaKey}',${idx},'terminal',this.value)"></td>
