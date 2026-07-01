@@ -10,8 +10,8 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "express": "4.19.2",
+    "express": "4.21.2",
     "jsonwebtoken": "9.0.2",
-    "bcryptjs": "2.4.3"
+    "bcryptjs": "3.0.2"
   }
 }
