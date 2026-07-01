@@ -1,20 +1,21 @@
 // ============================================================
 //  Servidor – Sistema de Rotinas Coamo
 //  Node.js + Express  |  Porta: 3000
-//  Dados: dados.json  |  Auth: JWT
+//  Dados: Upstash Redis (persistente) + fallback dados.json
+//  Auth: JWT
 // ============================================================
 
-const express  = require('express');
-const fs       = require('fs');
-const path     = require('path');
-const jwt      = require('jsonwebtoken');
-const bcrypt   = require('bcryptjs');
+const express = require('express');
+const fs      = require('fs');
+const path    = require('path');
+const jwt     = require('jsonwebtoken');
+const bcrypt  = require('bcryptjs');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 const DIR  = __dirname;
 
-// ── Segredo JWT (Railway define via variável de ambiente) ────────────
+// ── JWT ──────────────────────────────────────────────────────────────
 const JWT_SECRET = process.env.JWT_SECRET || (() => {
   if (process.env.NODE_ENV === 'production') {
     console.error('ERRO CRÍTICO: JWT_SECRET não definido em produção!');
@@ -23,177 +24,165 @@ const JWT_SECRET = process.env.JWT_SECRET || (() => {
   return 'coamo-dev-local-nao-usar-em-producao';
 })();
 
-// ── Arquivo de dados ─────────────────────────────────────────────────
-const DADOS_PATH = path.join(DIR, 'dados.json');
-if (!fs.existsSync(DADOS_PATH)) fs.writeFileSync(DADOS_PATH, '{}', 'utf8');
+// ── REDIS (Upstash) ───────────────────────────────────────────────────
+const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL;
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const USAR_REDIS  = !!(REDIS_URL && REDIS_TOKEN);
 
-// ── Usuários (senhas em hash bcrypt ou texto plano para compatibilidade)
-// Para adicionar usuários, edite o arquivo users.json ou
-// defina a variável de ambiente USERS_JSON no Railway.
-// Formato: [{ "username": "x", "passwordHash": "bcrypt-hash", "role": "operador|admin" }]
-// ─────────────────────────────────────────────────────────────────────
-function carregarUsuarios() {
-  // Tenta carregar de variável de ambiente (Railway) ou arquivo local
-  const raw = process.env.USERS_JSON || null;
-  if (raw) {
-    try { return JSON.parse(raw); } catch { /* cai no padrão */ }
-  }
-  const usersPath = path.join(DIR, 'users.json');
-  if (fs.existsSync(usersPath)) {
-    try { return JSON.parse(fs.readFileSync(usersPath, 'utf8')); } catch {}
-  }
-  // Usuários padrão (fallback)
-  return USUARIOS_PADRAO;
+// Chave no Redis onde ficam todos os dados
+const REDIS_CHAVE = 'coamo:dados';
+
+// Cache em memória para evitar leitura do Redis a cada requisição
+let _cache = {};
+let _cacheCarregado = false;
+
+async function redisGet(chave) {
+  const r = await fetch(`${REDIS_URL}/get/${encodeURIComponent(chave)}`, {
+    headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
+  });
+  const json = await r.json();
+  return json.result; // null se não existir
 }
 
-// Usuários padrão – mesmos do index.html original
-// As senhas aqui estão em bcrypt hash OU em texto plano (campo "password")
+async function redisSet(chave, valor) {
+  await fetch(`${REDIS_URL}/set/${encodeURIComponent(chave)}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${REDIS_TOKEN}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value: valor })
+  });
+}
+
+// Carrega todos os dados do Redis (ou arquivo local) na inicialização
+async function carregarDados() {
+  if (USAR_REDIS) {
+    try {
+      const raw = await redisGet(REDIS_CHAVE);
+      _cache = raw ? JSON.parse(raw) : {};
+      console.log('  [Redis] Dados carregados do Upstash');
+    } catch (e) {
+      console.warn('  [Redis] Falha ao carregar — usando arquivo local:', e.message);
+      _cache = lerArquivoLocal();
+    }
+  } else {
+    _cache = lerArquivoLocal();
+  }
+  _cacheCarregado = true;
+}
+
+function lerArquivoLocal() {
+  const p = path.join(DIR, 'dados.json');
+  try { return JSON.parse(fs.readFileSync(p, 'utf8')); }
+  catch { return {}; }
+}
+
+function lerDados() {
+  return _cache;
+}
+
+async function salvarDadosChave(chave, valor) {
+  _cache[chave] = valor;
+  if (USAR_REDIS) {
+    try {
+      await redisSet(REDIS_CHAVE, JSON.stringify(_cache));
+    } catch (e) {
+      console.warn('  [Redis] Falha ao salvar chave:', chave, e.message);
+    }
+  } else {
+    // Fallback: salva no arquivo local
+    try {
+      fs.writeFileSync(path.join(DIR, 'dados.json'), JSON.stringify(_cache, null, 2), 'utf8');
+    } catch {}
+  }
+}
+
+// ── USUÁRIOS ─────────────────────────────────────────────────────────
 const USUARIOS_PADRAO = [
   { username: 'Coamo1',  password: 'Coamo1',   role: 'operador' },
   { username: 'admin',   password: 'admin123',  role: 'admin'    }
 ];
 
-// Verifica senha (aceita tanto bcrypt hash quanto texto plano)
+function carregarUsuarios() {
+  const raw = process.env.USERS_JSON || null;
+  if (raw) { try { return JSON.parse(raw); } catch {} }
+  const p = path.join(DIR, 'users.json');
+  if (fs.existsSync(p)) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch {} }
+  return USUARIOS_PADRAO;
+}
+
 async function verificarSenha(senha, usuario) {
-  if (usuario.passwordHash) {
-    return bcrypt.compareSync(senha, usuario.passwordHash);
-  }
-  // texto plano (compatibilidade com configuração original)
+  if (usuario.passwordHash) return bcrypt.compareSync(senha, usuario.passwordHash);
   return senha === usuario.password;
 }
 
-// ── Middleware ────────────────────────────────────────────────────────
+// ── MIDDLEWARE ────────────────────────────────────────────────────────
 app.use(express.json({ limit: '5mb' }));
 
-// Middleware de autenticação JWT
 function autenticar(req, res, next) {
   const header = req.headers['authorization'] || '';
   const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return res.status(401).json({ erro: 'Não autenticado' });
-  try {
-    req.usuario = jwt.verify(token, JWT_SECRET);
-    next();
-  } catch {
-    res.status(401).json({ erro: 'Token inválido ou expirado' });
-  }
-}
-
-// Middleware que exige role admin
-function soAdmin(req, res, next) {
-  if (req.usuario?.role !== 'admin') {
-    return res.status(403).json({ erro: 'Acesso negado. Apenas administradores.' });
-  }
-  next();
-}
-
-// Mutex simples para escrita no JSON
-let escrevendo = false;
-const filaEscrita = [];
-
-function escreverDados(dados) {
-  return new Promise((resolve, reject) => {
-    const executar = () => {
-      escrevendo = true;
-      try {
-        fs.writeFileSync(DADOS_PATH, JSON.stringify(dados, null, 2), 'utf8');
-        resolve();
-      } catch (e) {
-        reject(e);
-      } finally {
-        escrevendo = false;
-        if (filaEscrita.length > 0) filaEscrita.shift()();
-      }
-    };
-    if (escrevendo) filaEscrita.push(executar);
-    else executar();
-  });
-}
-
-function lerDados() {
-  try { return JSON.parse(fs.readFileSync(DADOS_PATH, 'utf8')); }
-  catch { return {}; }
+  try { req.usuario = jwt.verify(token, JWT_SECRET); next(); }
+  catch { res.status(401).json({ erro: 'Token inválido ou expirado' }); }
 }
 
 // ── ROTAS DE AUTENTICAÇÃO ─────────────────────────────────────────────
 
-// POST /api/login
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body || {};
-  if (!username || !password) {
+  if (!username || !password)
     return res.status(400).json({ erro: 'Usuário e senha são obrigatórios' });
-  }
+
   const usuarios = carregarUsuarios();
   const usuario  = usuarios.find(u => u.username === username);
-  if (!usuario) {
+  if (!usuario || !(await verificarSenha(password, usuario)))
     return res.status(401).json({ erro: 'Usuário ou senha incorretos' });
-  }
-  const ok = await verificarSenha(password, usuario);
-  if (!ok) {
-    return res.status(401).json({ erro: 'Usuário ou senha incorretos' });
-  }
+
   const token = jwt.sign(
     { username: usuario.username, role: usuario.role },
     JWT_SECRET,
     { expiresIn: '12h' }
   );
-  // Informa se é primeiro acesso — front vai redirecionar para troca de senha
   res.json({ token, username: usuario.username, role: usuario.role, primeiroAcesso: !!usuario.primeiroAcesso });
 });
 
-// POST /api/trocar-senha  → troca senha no primeiro acesso
 app.post('/api/trocar-senha', autenticar, async (req, res) => {
   const { novaSenha } = req.body || {};
   if (!novaSenha) return res.status(400).json({ erro: 'Nova senha obrigatória' });
 
-  // Valida complexidade: mín 8 chars, maiúscula, minúscula, número, especial
   const forte = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(novaSenha);
-  if (!forte) {
+  if (!forte)
     return res.status(400).json({ erro: 'A senha deve ter no mínimo 8 caracteres com letra maiúscula, minúscula, número e caractere especial.' });
-  }
 
-  const usersPath = path.join(DIR, 'users.json');
-  let usuarios = carregarUsuarios();
+  const usuarios = carregarUsuarios();
   const idx = usuarios.findIndex(u => u.username === req.usuario.username);
   if (idx === -1) return res.status(404).json({ erro: 'Usuário não encontrado' });
 
-  // Salva hash bcrypt da nova senha e remove flag primeiroAcesso
   usuarios[idx].passwordHash = bcrypt.hashSync(novaSenha, 10);
   delete usuarios[idx].password;
   delete usuarios[idx].primeiroAcesso;
 
-  try {
-    fs.writeFileSync(usersPath, JSON.stringify(usuarios, null, 2), 'utf8');
-    res.json({ ok: true });
-  } catch {
-    res.status(500).json({ erro: 'Erro ao salvar senha' });
-  }
+  // Persiste no arquivo local e em memória
+  try { fs.writeFileSync(path.join(DIR, 'users.json'), JSON.stringify(usuarios, null, 2), 'utf8'); } catch {}
+  process.env.USERS_JSON = JSON.stringify(usuarios);
+  res.json({ ok: true });
 });
 
 // ── ROTAS DE DADOS ────────────────────────────────────────────────────
 
-// GET /api/dados  → retorna todos os dados (qualquer usuário autenticado)
 app.get('/api/dados', autenticar, (req, res) => {
   res.json(lerDados());
 });
 
-// POST /api/dados/:chave  → salva um valor (qualquer usuário autenticado)
-// Chaves que começam com "horarios_" só podem ser salvas por admin
 app.post('/api/dados/:chave', autenticar, async (req, res) => {
   const chave = decodeURIComponent(req.params.chave);
 
-  // Protege as chaves de horário para somente admin
-  if (chave.startsWith('horarios_') && req.usuario.role !== 'admin') {
+  if (chave.startsWith('horarios_') && req.usuario.role !== 'admin')
     return res.status(403).json({ erro: 'Apenas administradores podem editar horários.' });
-  }
 
-  let valor;
-  try   { valor = req.body.valor !== undefined ? req.body.valor : req.body; }
-  catch { valor = req.body; }
+  const valor = req.body.valor !== undefined ? req.body.valor : req.body;
 
   try {
-    const dados = lerDados();
-    dados[chave] = valor;
-    await escreverDados(dados);
+    await salvarDadosChave(chave, valor);
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ erro: 'Erro ao salvar dados' });
@@ -201,34 +190,34 @@ app.post('/api/dados/:chave', autenticar, async (req, res) => {
 });
 
 // ── ARQUIVOS ESTÁTICOS ────────────────────────────────────────────────
-// Bloqueia arquivos sensíveis ANTES de servir estáticos
 const ARQUIVOS_BLOQUEADOS = new Set([
   'dados.json','users.json','server.js','package.json',
   'package-lock.json','.env','servidor.ps1','servico_wrapper.ps1',
   'INSTALAR_SERVICO_TI.ps1','DESINSTALAR_SERVICO_TI.ps1'
 ]);
+
 app.use((req, res, next) => {
-  const nome = req.path.replace(/^\//, '').toLowerCase();
-  if (ARQUIVOS_BLOQUEADOS.has(nome) || ARQUIVOS_BLOQUEADOS.has(req.path.replace(/^\//,''))) {
+  const nome = req.path.replace(/^\//, '');
+  if (ARQUIVOS_BLOQUEADOS.has(nome) || ARQUIVOS_BLOQUEADOS.has(nome.toLowerCase()))
     return res.status(403).send('Proibido');
-  }
   next();
 });
 
-// Serve os arquivos da pasta raiz (index.html, dashboard.html, etc.)
 app.use(express.static(DIR, {
   index: 'index.html',
   setHeaders(res, filePath) {
-    if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
+    if (filePath.endsWith('.html') || filePath.endsWith('.js'))
       res.setHeader('Cache-Control', 'no-cache');
-    }
   }
 }));
 
 // ── START ─────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`\n  ==========================================`);
-  console.log(`   SERVIDOR INICIADO - PORTA ${PORT}`);
-  console.log(`   Acesso: http://localhost:${PORT}`);
-  console.log(`  ==========================================\n`);
+carregarDados().then(() => {
+  app.listen(PORT, () => {
+    console.log(`\n  ==========================================`);
+    console.log(`   SERVIDOR INICIADO - PORTA ${PORT}`);
+    console.log(`   Acesso: http://localhost:${PORT}`);
+    console.log(`   Armazenamento: ${USAR_REDIS ? 'Upstash Redis ✓' : 'Arquivo local'}`);
+    console.log(`  ==========================================\n`);
+  });
 });
