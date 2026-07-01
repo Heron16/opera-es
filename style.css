@@ -43,19 +43,6 @@ header h1 { font-size: 1.1rem; color: #58a6ff; font-weight: 600; letter-spacing:
   background: rgba(88,166,255,0.1); border: 1px solid rgba(88,166,255,0.25);
   padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; color: #58a6ff;
 }
-.btn-salvar-turno {
-  background: rgba(88,166,255,0.12); border: 1px solid rgba(88,166,255,0.3);
-  color: #58a6ff; padding: 5px 14px; border-radius: 8px; cursor: pointer;
-  font-size: 0.82rem; transition: all 0.2s; font-weight: 500;
-}
-.btn-salvar-turno:hover { background: #58a6ff; color: #000; }
-
-.btn-carregar-turno {
-  background: rgba(255,166,87,0.12); border: 1px solid rgba(255,166,87,0.3);
-  color: #ffa657; padding: 5px 14px; border-radius: 8px; cursor: pointer;
-  font-size: 0.82rem; transition: all 0.2s; font-weight: 500; display: inline-flex; align-items: center;
-}
-.btn-carregar-turno:hover { background: #ffa657; color: #000; }
 .btn-exportar {
   background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3);
   color: #3fb950; padding: 5px 14px; border-radius: 8px; cursor: pointer;
@@ -123,6 +110,7 @@ header h1 { font-size: 1.1rem; color: #58a6ff; font-weight: 600; letter-spacing:
   background: #1e2d42; border-radius: 6px;
   border: 1px solid #2a3a52; border-left: 3px solid transparent;
   transition: border-color 0.15s, background 0.15s;
+  position: relative;
 }
 .rotina-item:hover { background: #243348; border-color: #3a4f6a; }
 .rotina-item.current { border-left-color: #58a6ff; background: rgba(88,166,255,0.06); }
@@ -134,7 +122,6 @@ header h1 { font-size: 1.1rem; color: #58a6ff; font-weight: 600; letter-spacing:
   padding: 1px 7px; border-radius: 4px; font-weight: 700; letter-spacing: 0.5px;
 }
 .rotina-item.erro { border-left-color: #f85149; background: rgba(248,81,73,0.05); }
-.rotina-item { position: relative; }
 
 .rotina-time {
   font-size: 0.85rem; color: #58a6ff; white-space: nowrap;

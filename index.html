@@ -50,7 +50,13 @@ async function fazerLogin() {
     sessionStorage.setItem('token', data.token);
     sessionStorage.setItem('user',  data.username);
     sessionStorage.setItem('role',  data.role);
-    window.location.href = 'dashboard.html';
+
+    // Primeiro acesso — redireciona para troca de senha obrigatória
+    if (data.primeiroAcesso) {
+      window.location.href = 'trocar-senha.html';
+    } else {
+      window.location.href = 'dashboard.html';
+    }
 
   } catch (e) {
     errEl.textContent = 'Erro ao conectar com o servidor.';

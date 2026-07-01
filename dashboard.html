@@ -500,9 +500,7 @@ function getCorvuBlocked(p) { try{return JSON.parse(lerChave('blocked_corvu_'+p)
 
 // ── PERMISSÕES POR PERFIL ─────────────────────────────────────────────
 // admin  → pode editar tudo (rotinas + horários)
-// Coamo1 → pode editar rotinas (status, início, fim, campos)
-//           NÃO pode editar a página de Horários
-const podeEditarHorarios = (role === 'admin');
+// operador → pode editar rotinas (status, início, fim, campos)
 
 // ── AÇÕES ─────────────────────────────────────────────────────────────
 async function mudarStatus(p,id,val,dk) {

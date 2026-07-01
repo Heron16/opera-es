@@ -308,7 +308,7 @@ const ROTINAS_UNIMED = [
 
 // Rotinas Serasa
 const ROTINAS_SERASA = [
-  { id:'s1', hora:'A cada 15 dias após 00:00h', texto:'Conectar no Site SERASA – Produto 085', obs:'K:\\Corporativo_des\\Produção\\Arquivos\\Cser\\Serasa.txt | Site: https://st.serasaexperian.com.br – P6044 – L2G5RqxE | Tel: (11) 2847-9900', caminho:'Serviço Batch/Conectar no Site SERASA – Produto 085', secao:'Rotina Quinzenal' },
+  { id:'s1', hora:'A cada 15 dias após 00:00h', texto:'Conectar no Site SERASA – Produto 085', obs:'K:\\Corporativo_des\\Produção\\Arquivos\\Cser\\Serasa.txt | Site: https://st.serasaexperian.com.br | Tel: (11) 2847-9900', caminho:'Serviço Batch/Conectar no Site SERASA – Produto 085', secao:'Rotina Quinzenal' },
   { id:'s2', hora:'A cada 15 dias após 00:00h', texto:'Quinz. - SERASA String Relato Analítico', obs:'Fatpem', caminho:'Serviço Batch/Fatpem/Quinz. - SERASA String Relato Analítico', secao:'Rotina Quinzenal' },
   { id:'s3', hora:'05/04/2026', texto:'Job Semanal Serasa Remessa', obs:'Envio arquivo / Renomear arquivo | Arquivo: \\\\coamo\\fs\\coamo\\prod\\scac\\arquivos\\serasa_envio_deb.txt | Renomear: serasa_envio_deb_rem_ddmmaaaa.txt', caminho:'Serviço Batch/Job Semanal Serasa Remessa', secao:'Abril 2026' },
   { id:'s4', hora:'05/04/2026', texto:'Receber arquivo e verificar inconsistência', obs:'Produto 012', caminho:'Serviço Batch/Receber arquivo e verificar inconsistência', secao:'Abril 2026' },

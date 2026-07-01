@@ -15,7 +15,13 @@ const PORT = process.env.PORT || 3000;
 const DIR  = __dirname;
 
 // ── Segredo JWT (Railway define via variável de ambiente) ────────────
-const JWT_SECRET = process.env.JWT_SECRET || 'coamo-secret-local-dev-2025';
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('ERRO CRÍTICO: JWT_SECRET não definido em produção!');
+    process.exit(1);
+  }
+  return 'coamo-dev-local-nao-usar-em-producao';
+})();
 
 // ── Arquivo de dados ─────────────────────────────────────────────────
 const DADOS_PATH = path.join(DIR, 'dados.json');
@@ -130,7 +136,37 @@ app.post('/api/login', async (req, res) => {
     JWT_SECRET,
     { expiresIn: '12h' }
   );
-  res.json({ token, username: usuario.username, role: usuario.role });
+  // Informa se é primeiro acesso — front vai redirecionar para troca de senha
+  res.json({ token, username: usuario.username, role: usuario.role, primeiroAcesso: !!usuario.primeiroAcesso });
+});
+
+// POST /api/trocar-senha  → troca senha no primeiro acesso
+app.post('/api/trocar-senha', autenticar, async (req, res) => {
+  const { novaSenha } = req.body || {};
+  if (!novaSenha) return res.status(400).json({ erro: 'Nova senha obrigatória' });
+
+  // Valida complexidade: mín 8 chars, maiúscula, minúscula, número, especial
+  const forte = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(novaSenha);
+  if (!forte) {
+    return res.status(400).json({ erro: 'A senha deve ter no mínimo 8 caracteres com letra maiúscula, minúscula, número e caractere especial.' });
+  }
+
+  const usersPath = path.join(DIR, 'users.json');
+  let usuarios = carregarUsuarios();
+  const idx = usuarios.findIndex(u => u.username === req.usuario.username);
+  if (idx === -1) return res.status(404).json({ erro: 'Usuário não encontrado' });
+
+  // Salva hash bcrypt da nova senha e remove flag primeiroAcesso
+  usuarios[idx].passwordHash = bcrypt.hashSync(novaSenha, 10);
+  delete usuarios[idx].password;
+  delete usuarios[idx].primeiroAcesso;
+
+  try {
+    fs.writeFileSync(usersPath, JSON.stringify(usuarios, null, 2), 'utf8');
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ erro: 'Erro ao salvar senha' });
+  }
 });
 
 // ── ROTAS DE DADOS ────────────────────────────────────────────────────
@@ -165,23 +201,29 @@ app.post('/api/dados/:chave', autenticar, async (req, res) => {
 });
 
 // ── ARQUIVOS ESTÁTICOS ────────────────────────────────────────────────
+// Bloqueia arquivos sensíveis ANTES de servir estáticos
+const ARQUIVOS_BLOQUEADOS = new Set([
+  'dados.json','users.json','server.js','package.json',
+  'package-lock.json','.env','servidor.ps1','servico_wrapper.ps1',
+  'INSTALAR_SERVICO_TI.ps1','DESINSTALAR_SERVICO_TI.ps1'
+]);
+app.use((req, res, next) => {
+  const nome = req.path.replace(/^\//, '').toLowerCase();
+  if (ARQUIVOS_BLOQUEADOS.has(nome) || ARQUIVOS_BLOQUEADOS.has(req.path.replace(/^\//,''))) {
+    return res.status(403).send('Proibido');
+  }
+  next();
+});
+
 // Serve os arquivos da pasta raiz (index.html, dashboard.html, etc.)
 app.use(express.static(DIR, {
   index: 'index.html',
-  // Não expõe arquivos sensíveis
   setHeaders(res, filePath) {
-    // Cache curto para HTML/JS para facilitar atualizações
     if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
       res.setHeader('Cache-Control', 'no-cache');
     }
   }
 }));
-
-// Bloqueia acesso a arquivos sensíveis
-app.get(['/dados.json', '/users.json', '/server.js', '/package.json',
-         '/package-lock.json', '/.env', '/servidor.ps1'], (req, res) => {
-  res.status(403).send('Proibido');
-});
 
 // ── START ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {

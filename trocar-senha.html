@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operações - Criar Senha</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .req-lista { list-style: none; margin: 10px 0 16px; padding: 0; text-align: left; }
+    .req-lista li { font-size: 0.82rem; padding: 2px 0; color: #8b949e; }
+    .req-lista li.ok  { color: #3fb950; }
+    .req-lista li::before { content: '✗ '; color: #f85149; }
+    .req-lista li.ok::before { content: '✔ '; color: #3fb950; }
+    .senha-wrap { position: relative; margin-bottom: 12px; }
+    .senha-wrap input { margin-bottom: 0; }
+    .toggle-senha {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: #8b949e; cursor: pointer; font-size: 1rem; padding: 0;
+    }
+    .forca-barra { height: 4px; border-radius: 2px; margin-top: 6px; transition: all 0.3s; background: #30363d; }
+    .forca-barra.fraca    { background: #f85149; width: 33%; }
+    .forca-barra.media    { background: #ffa657; width: 66%; }
+    .forca-barra.forte    { background: #3fb950; width: 100%; }
+    .forca-label { font-size: 0.75rem; color: #8b949e; margin-top: 3px; text-align: right; }
+  </style>
+</head>
+<body>
+<div class="login-container">
+  <div class="login-box">
+    <h1>🔐 Criar Nova Senha</h1>
+    <p>Primeiro acesso — defina sua senha pessoal</p>
+
+    <div class="senha-wrap">
+      <input type="password" id="novaSenha" placeholder="Nova senha" oninput="verificar()" autocomplete="new-password">
+      <button class="toggle-senha" type="button" onclick="toggleVer('novaSenha',this)">👁️</button>
+    </div>
+    <div class="forca-barra" id="forcaBarra"></div>
+    <div class="forca-label" id="forcaLabel"></div>
+
+    <ul class="req-lista" id="reqLista">
+      <li id="r1">Mínimo 8 caracteres</li>
+      <li id="r2">Letra maiúscula (A-Z)</li>
+      <li id="r3">Letra minúscula (a-z)</li>
+      <li id="r4">Número (0-9)</li>
+      <li id="r5">Caractere especial (!@#$%...)</li>
+    </ul>
+
+    <div class="senha-wrap">
+      <input type="password" id="confirmar" placeholder="Confirmar nova senha" oninput="verificar()" autocomplete="new-password">
+      <button class="toggle-senha" type="button" onclick="toggleVer('confirmar',this)">👁️</button>
+    </div>
+
+    <button class="btn-login" id="btnSalvar" onclick="salvar()" disabled>Salvar Senha</button>
+    <div class="login-error" id="erro"></div>
+  </div>
+</div>
+<script>
+const token = sessionStorage.getItem('token');
+const user  = sessionStorage.getItem('user');
+if (!token || !user) { window.location.href = 'index.html'; }
+
+function toggleVer(id, btn) {
+  const el = document.getElementById(id);
+  if (el.type === 'password') { el.type = 'text'; btn.textContent = '🙈'; }
+  else { el.type = 'password'; btn.textContent = '👁️'; }
+}
+
+function verificar() {
+  const s = document.getElementById('novaSenha').value;
+  const c = document.getElementById('confirmar').value;
+
+  const reqs = {
+    r1: s.length >= 8,
+    r2: /[A-Z]/.test(s),
+    r3: /[a-z]/.test(s),
+    r4: /\d/.test(s),
+    r5: /[^A-Za-z\d]/.test(s),
+  };
+
+  let pontos = Object.values(reqs).filter(Boolean).length;
+
+  Object.entries(reqs).forEach(([id, ok]) => {
+    document.getElementById(id).className = ok ? 'ok' : '';
+  });
+
+  const barra = document.getElementById('forcaBarra');
+  const label = document.getElementById('forcaLabel');
+  if (s.length === 0) { barra.className = 'forca-barra'; label.textContent = ''; }
+  else if (pontos <= 2) { barra.className = 'forca-barra fraca'; label.textContent = 'Fraca'; }
+  else if (pontos <= 4) { barra.className = 'forca-barra media'; label.textContent = 'Média'; }
+  else { barra.className = 'forca-barra forte'; label.textContent = 'Forte'; }
+
+  const tudo = Object.values(reqs).every(Boolean);
+  const igual = s === c && c.length > 0;
+  document.getElementById('btnSalvar').disabled = !(tudo && igual);
+  document.getElementById('erro').textContent = (c.length > 0 && !igual) ? 'As senhas não coincidem.' : '';
+}
+
+async function salvar() {
+  const novaSenha = document.getElementById('novaSenha').value;
+  const btn = document.getElementById('btnSalvar');
+  const erro = document.getElementById('erro');
+
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  erro.textContent = '';
+
+  try {
+    const r = await fetch('/api/trocar-senha', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ novaSenha })
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      erro.textContent = data.erro || 'Erro ao salvar senha.';
+      btn.disabled = false;
+      btn.textContent = 'Salvar Senha';
+      return;
+    }
+    // Sucesso — vai para o dashboard
+    window.location.href = 'dashboard.html';
+  } catch {
+    erro.textContent = 'Erro ao conectar com o servidor.';
+    btn.disabled = false;
+    btn.textContent = 'Salvar Senha';
+  }
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && !document.getElementById('btnSalvar').disabled) salvar(); });
+</script>
+</body>
+</html>
