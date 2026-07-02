@@ -644,7 +644,7 @@ async function toggleCorvuBlock(p,idx) {
 }
 
 // ── BUILD ROTINA HTML ─────────────────────────────────────────────────
-function buildRotinaHtml(r,p,dk,blocked,status,agora,isDiaria,badge) {
+function buildRotinaHtml(r,p,dk,blocked,status,agora,temHora,badge) {
   const isBlocked=blocked.includes(r.id);
   const info=status[r.id]||{};
   const st=info.status||'';
@@ -728,8 +728,8 @@ function buildRotinaHtml(r,p,dk,blocked,status,agora,isDiaria,badge) {
 // ── RENDER ROTINAS ────────────────────────────────────────────────────
 function renderRotinas(tabId,rotinas,p,dk) {
   const tab=document.getElementById('tab-'+tabId);
+  if(!tab) return; // segurança: aba não existe no DOM
   const blocked=getBlocked(p,dk), status=getStatus(p,dk), agora=horaAtual();
-  const isDiaria=(p==='diario'||p==='fds');
   const temHora=(p==='diario'||p==='fds'||p==='mensal'||p==='anual');
 
   // Seções que devem ser renderizadas como tabela Corvu
