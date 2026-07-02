@@ -173,6 +173,29 @@ app.get('/api/dados', autenticar, (req, res) => {
   res.json(lerDados());
 });
 
+// POST /api/dados/migrar — salva todos os dados de uma vez (migração do localStorage)
+app.post('/api/migrar', autenticar, async (req, res) => {
+  const dadosNovos = req.body || {};
+  if (typeof dadosNovos !== 'object' || Array.isArray(dadosNovos))
+    return res.status(400).json({ erro: 'Formato inválido' });
+
+  try {
+    // Mescla com dados existentes — novos dados têm prioridade
+    const existentes = lerDados();
+    const merged = { ...existentes, ...dadosNovos };
+    _cache = merged;
+
+    if (USAR_REDIS) {
+      await redisSet(REDIS_CHAVE, JSON.stringify(merged));
+    } else {
+      fs.writeFileSync(path.join(DIR, 'dados.json'), JSON.stringify(merged, null, 2), 'utf8');
+    }
+    res.json({ ok: true, chaves: Object.keys(dadosNovos).length });
+  } catch (e) {
+    res.status(500).json({ erro: 'Erro ao migrar dados' });
+  }
+});
+
 app.post('/api/dados/:chave', autenticar, async (req, res) => {
   const chave = decodeURIComponent(req.params.chave);
 

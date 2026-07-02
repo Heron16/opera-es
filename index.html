@@ -18,6 +18,14 @@
   </div>
 </div>
 <script>
+// Proteção básica de inspeção
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  if (e.key === 'F12') { e.preventDefault(); return false; }
+  if (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key.toUpperCase())) { e.preventDefault(); return false; }
+  if (e.ctrlKey && e.key.toUpperCase() === 'U') { e.preventDefault(); return false; }
+});
+
 async function fazerLogin() {
   const u = document.getElementById('username').value.trim();
   const p = document.getElementById('password').value;

@@ -67,6 +67,7 @@
     <span id="relogioHeader"></span>
     <span class="user-badge" id="userBadge"></span>
     <button class="btn-exportar" onclick="exportarPDF()" title="Exportar PDF">🖨️ Exportar PDF</button>
+    <button class="btn-sincronizar" id="btnSincronizar" onclick="sincronizarDados()" title="Sincronizar dados locais para o servidor" style="display:none">☁️ Sincronizar</button>
     <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
 </header>
@@ -92,10 +93,80 @@ if (!user || !token || !['operador','admin'].includes(role)) {
 document.getElementById('userBadge').textContent = '👤 ' + user + ' (' + role + ')';
 function logout() { sessionStorage.clear(); window.location.href = 'index.html'; }
 
+// ── SINCRONIZAÇÃO localStorage → Redis ───────────────────────────────
+// Copia todos os dados do localStorage para o servidor (migração única)
+async function sincronizarDados() {
+  const btn = document.getElementById('btnSincronizar');
+  btn.disabled = true;
+  btn.textContent = '⏳ Sincronizando...';
+
+  // Coleta todos os dados relevantes do localStorage
+  const dados = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && (k.startsWith('status_') || k.startsWith('blocked_') ||
+              k.startsWith('corvu_') || k.startsWith('horarios_'))) {
+      dados[k] = localStorage.getItem(k);
+    }
+  }
+
+  const qtd = Object.keys(dados).length;
+  if (qtd === 0) {
+    btn.textContent = '✓ Nada a sincronizar';
+    setTimeout(() => { btn.textContent = '☁️ Sincronizar'; btn.disabled = false; }, 2000);
+    return;
+  }
+
+  try {
+    const r = await fetch('/api/migrar', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(dados)
+    });
+    const data = await r.json();
+    if (r.ok) {
+      btn.textContent = `✓ ${data.chaves} chaves sincronizadas!`;
+      btn.style.background = 'rgba(63,185,80,0.2)';
+      btn.style.color = '#3fb950';
+      btn.style.borderColor = 'rgba(63,185,80,0.4)';
+      setTimeout(() => {
+        btn.textContent = '☁️ Sincronizar';
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.style.borderColor = '';
+        btn.disabled = false;
+      }, 3000);
+    } else {
+      btn.textContent = '✖ Erro: ' + (data.erro || 'falha');
+      btn.disabled = false;
+    }
+  } catch {
+    btn.textContent = '✖ Sem conexão';
+    btn.disabled = false;
+  }
+}
+
+// Mostra botão de sincronizar só para admin e quando há dados no localStorage
+function verificarBtnSincronizar() {
+  if (role !== 'admin') return;
+  const temDados = Array.from({length: localStorage.length}, (_,i) => localStorage.key(i))
+    .some(k => k && (k.startsWith('status_') || k.startsWith('corvu_')));
+  const btn = document.getElementById('btnSincronizar');
+  if (btn) btn.style.display = temDados ? 'inline-block' : 'none';
+}
+
 // Cabeçalho de autenticação para todas as chamadas de API
 function authHeaders() {
   return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
 }
+
+// ── PROTEÇÃO BÁSICA DE INSPEÇÃO ───────────────────────────────────────
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  if (e.key === 'F12') { e.preventDefault(); return false; }
+  if (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key.toUpperCase())) { e.preventDefault(); return false; }
+  if (e.ctrlKey && e.key.toUpperCase() === 'U') { e.preventDefault(); return false; }
+});
 
 // ── ABAS ──────────────────────────────────────────────────────────────
 const TABS = [
@@ -631,7 +702,7 @@ function buildRotinaHtml(r,p,dk,blocked,status,agora,isDiaria,badge) {
         </div>
       </div>`:''}`;
 
-  if(isDiaria && !r.semStatus) {
+  if(temHora && !r.semStatus) {
     const showI=(st==='executando'||st==='encerrado'||st==='erro');
     const showF=(st==='encerrado'||st==='erro');
     if(showI||showF) {
@@ -659,6 +730,7 @@ function renderRotinas(tabId,rotinas,p,dk) {
   const tab=document.getElementById('tab-'+tabId);
   const blocked=getBlocked(p,dk), status=getStatus(p,dk), agora=horaAtual();
   const isDiaria=(p==='diario'||p==='fds');
+  const temHora=(p==='diario'||p==='fds'||p==='mensal'||p==='anual');
 
   // Seções que devem ser renderizadas como tabela Corvu
   const secoesCorvu = new Set(['Corvu Sábado','Corvu Domingo']);
@@ -708,7 +780,7 @@ function renderRotinas(tabId,rotinas,p,dk) {
 function renderCorvu(tabId,lista,p) {
   const tab = document.getElementById('tab-'+tabId) || document.getElementById(tabId);
   const dados=getCorvuDados(p);
-  const comBloqueio=(p==='corvu');
+  const comBloqueio=(p==='corvu'||p==='corvumensal');
   const blocked=comBloqueio?getCorvuBlocked(p):[];
   const isMenual=(p==='corvumensal');
 
@@ -805,7 +877,7 @@ function atualizarRelogio() {
 function verificarMudancaDia() { const n=getDiaKey(); if(n!==diaAtual){diaAtual=n;renderAll();} }
 
 // ── INIT ──────────────────────────────────────────────────────────────
-carregarDadosServidor().then(() => { renderTabBar(); renderAll(); });
+carregarDadosServidor().then(() => { renderTabBar(); renderAll(); verificarBtnSincronizar(); });
 atualizarRelogio();
 iniciarPolling();
 setInterval(atualizarRelogio,1000);
