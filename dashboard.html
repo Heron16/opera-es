@@ -769,7 +769,7 @@ function renderRotinas(tabId,rotinas,p,dk) {
     } else {
       // Renderiza como rotinas normais
       html+=`<div class="rotina-section"><h3>${sec}</h3>`;
-      items.forEach(r=>{ html+=buildRotinaHtml(r,p,dk,blocked,status,agora,isDiaria,null); });
+      items.forEach(r=>{ html+=buildRotinaHtml(r,p,dk,blocked,status,agora,temHora,null); });
       html+=`</div>`;
     }
   });
