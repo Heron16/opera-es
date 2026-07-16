@@ -228,11 +228,14 @@ function getCorvuDadosDia(diaKey) {
 }
 async function saveCorvuCampoDia(diaKey, idx, campo, val) {
   const k = 'corvu_dados_corvu_' + (diaKey || diaAtual);
+  // Protege imediatamente contra o polling sobrescrever
+  _localTimestamp[k] = Date.now();
   const d = getCorvuDadosDia(diaKey);
   if (!d[idx]) d[idx] = {};
   d[idx][campo] = val;
-  await salvarChave(k, JSON.stringify(d));
+  // Atualiza o cache local antes mesmo de salvar no servidor
   _cache[k] = JSON.stringify(d);
+  await salvarChave(k, JSON.stringify(d));
   atualizarIndicadorPendentes();
 }
 
@@ -502,7 +505,7 @@ function atualizarIndicadorPendentes() {
 }
 
 // Polling: atualiza dados do servidor a cada 3 segundos (quando em modo web)
-const PROTEGER_POR_MS = 15000; // ignora updates do servidor por 15s após edição local
+const PROTEGER_POR_MS = 60000; // ignora updates do servidor por 60s após edição local
 function iniciarPolling() {
   if (!USAR_API) return;
   setInterval(async () => {
@@ -572,11 +575,14 @@ function marcarEdicaoLocal(chave) {
 async function saveCorvuCampo(p, idx, campo, val) {
   // Para o corvu diário, salva com chave datada
   const chave = p === 'corvu' ? 'corvu_dados_corvu_' + diaAtual : 'corvu_dados_' + p;
+  // Protege imediatamente contra o polling sobrescrever
+  _localTimestamp[chave] = Date.now();
   const d = getCorvuDados(p);
   if (!d[idx]) d[idx] = {};
   d[idx][campo] = val;
-  await salvarChave(chave, JSON.stringify(d));
+  // Atualiza o cache local antes mesmo de salvar no servidor
   _cache[chave] = JSON.stringify(d);
+  await salvarChave(chave, JSON.stringify(d));
   atualizarIndicadorPendentes();
 }
 function getCorvuBlocked(p) { try{return JSON.parse(lerChave('blocked_corvu_'+p)||'[]')}catch{return[]} }
