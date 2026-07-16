@@ -1,5 +1,5 @@
 // POST /api/migrar — importa todos os dados do localStorage de uma vez
-const { lerDados, salvarDados, verificarToken, setCors } = require('./_lib/redis');
+const { lerDados, salvarDados, verificarToken, setCors, parseBody } = require('./_lib/redis');
 
 module.exports = async function handler(req, res) {
   setCors(res);
@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
   const usuario = verificarToken(req);
   if (!usuario) return res.status(401).json({ erro: 'Não autenticado' });
 
-  const dadosNovos = req.body || {};
+  const dadosNovos = await parseBody(req);
   if (typeof dadosNovos !== 'object' || Array.isArray(dadosNovos))
     return res.status(400).json({ erro: 'Formato inválido' });
 

@@ -1,10 +1,7 @@
 // ── Helper compartilhado: Redis (Upstash REST) + JWT auth ─────────────
-// Usado por todas as funções serverless da pasta /api
-
-const jwt = require('jsonwebtoken');
+const jwt    = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-// ── Configuração ──────────────────────────────────────────────────────
 const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const JWT_SECRET  = process.env.JWT_SECRET || 'coamo-dev-local-nao-usar-em-producao';
@@ -16,6 +13,24 @@ const USUARIOS_PADRAO = [
   { username: 'Coamo1', password: 'Coamo1',  role: 'operador' },
   { username: 'admin',  password: 'admin123', role: 'admin'    },
 ];
+
+// ── Body parser manual (Vercel não parseia req.body automaticamente) ──
+function parseBody(req) {
+  return new Promise((resolve) => {
+    // Se já foi parseado (ex: ambiente local com Express)
+    if (req.body && typeof req.body === 'object') {
+      resolve(req.body);
+      return;
+    }
+    let data = '';
+    req.on('data', chunk => { data += chunk; });
+    req.on('end', () => {
+      try { resolve(JSON.parse(data || '{}')); }
+      catch { resolve({}); }
+    });
+    req.on('error', () => resolve({}));
+  });
+}
 
 // ── Redis REST ────────────────────────────────────────────────────────
 async function redisGet(chave) {
@@ -53,24 +68,15 @@ async function salvarDados(dados) {
   await redisSet(REDIS_CHAVE_DADOS, JSON.stringify(dados));
 }
 
-async function salvarChave(chave, valor) {
-  const dados = await lerDados();
-  dados[chave] = valor;
-  await salvarDados(dados);
-}
-
 // ── Usuários ──────────────────────────────────────────────────────────
 async function lerUsuarios() {
-  // 1. Tenta do Redis
   try {
     const raw = await redisGet(REDIS_CHAVE_USUARIOS);
     if (raw) return JSON.parse(raw);
   } catch {}
-  // 2. Tenta da variável de ambiente (compatibilidade Railway)
   if (process.env.USERS_JSON) {
     try { return JSON.parse(process.env.USERS_JSON); } catch {}
   }
-  // 3. Padrão
   return USUARIOS_PADRAO;
 }
 
@@ -92,7 +98,6 @@ function gerarToken(usuario) {
   );
 }
 
-// Retorna o payload do token ou null se inválido
 function verificarToken(req) {
   const header = req.headers['authorization'] || '';
   const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
@@ -101,7 +106,7 @@ function verificarToken(req) {
   catch { return null; }
 }
 
-// ── CORS / headers padrão ─────────────────────────────────────────────
+// ── CORS ──────────────────────────────────────────────────────────────
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
@@ -111,12 +116,12 @@ function setCors(res) {
 module.exports = {
   lerDados,
   salvarDados,
-  salvarChave,
   lerUsuarios,
   salvarUsuarios,
   verificarSenha,
   gerarToken,
   verificarToken,
   setCors,
+  parseBody,
   JWT_SECRET,
 };

@@ -1,12 +1,13 @@
 // POST /api/login
-const { lerUsuarios, verificarSenha, gerarToken, setCors } = require('./_lib/redis');
+const { lerUsuarios, verificarSenha, gerarToken, setCors, parseBody } = require('./_lib/redis');
 
 module.exports = async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ erro: 'Método não permitido' });
 
-  const { username, password } = req.body || {};
+  const body = await parseBody(req);
+  const { username, password } = body;
   if (!username || !password)
     return res.status(400).json({ erro: 'Usuário e senha são obrigatórios' });
 
