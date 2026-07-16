@@ -4,6 +4,7 @@
     { "source": "/api/dados",        "destination": "/api/dados.js" },
     { "source": "/api/salvar",       "destination": "/api/salvar.js" },
     { "source": "/api/migrar",       "destination": "/api/migrar.js" },
-    { "source": "/api/trocar-senha", "destination": "/api/trocar-senha.js" }
+    { "source": "/api/trocar-senha", "destination": "/api/trocar-senha.js" },
+    { "source": "/api/debug",        "destination": "/api/debug.js" }
   ]
 }
