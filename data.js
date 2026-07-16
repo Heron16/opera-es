@@ -1,4 +1,4 @@
-﻿// Rotinas Uniface Diária
+﻿// data.js — v2
 const ROTINAS_DIARIA = [
   { id:'d0a', hora:'00:00', texto:'Abrir Corvu – Corvu\\Data\\Eis\\Csf_online – Geral', obs:'Transporte_hora', caminho:'Serviço Batch/Transporte/Abrir Corvu – Corvu\\Data\\Eis\\Csf_online – Geral', campos:[{k:'geral',label:'Geral'},{k:'transporte_hora',label:'Transporte_hora'}], semStatus:true, secao:'Início do dia' },
   { id:'d1', hora:'01:00', texto:'Rotina Credicoamo - Serviços Bancários\\Produção\\Rotina Diária Provisão de Risco', obs:'SBRIJ001', caminho:'Credicoamo/Serviços Bancários/Produção/Rotina Diária Provisão de Risco', campos:[{k:'srv',label:'Servidor'},{k:'ter',label:'Terminal'}], secao:'Madrugada' },
