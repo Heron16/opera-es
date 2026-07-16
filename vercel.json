@@ -1,25 +1,19 @@
 {
-  "version": 2,
-  "routes": [
-    { "src": "/api/login",        "dest": "/api/login.js" },
-    { "src": "/api/dados",        "dest": "/api/dados.js" },
-    { "src": "/api/salvar",       "dest": "/api/salvar.js" },
-    { "src": "/api/migrar",       "dest": "/api/migrar.js" },
-    { "src": "/api/trocar-senha", "dest": "/api/trocar-senha.js" },
-    { "src": "/(.*)",             "dest": "/$1" }
+  "rewrites": [
+    { "source": "/api/login",        "destination": "/api/login.js" },
+    { "source": "/api/dados",        "destination": "/api/dados.js" },
+    { "source": "/api/salvar",       "destination": "/api/salvar.js" },
+    { "source": "/api/migrar",       "destination": "/api/migrar.js" },
+    { "source": "/api/trocar-senha", "destination": "/api/trocar-senha.js" }
   ],
   "headers": [
     {
       "source": "/:path*.html",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
     },
     {
       "source": "/:path*.js",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
     }
   ]
 }
