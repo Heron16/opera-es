@@ -298,7 +298,6 @@ const ROTINAS_CORVU_MENSAL = [
   { nome: 'Imobilizado - MSS',                            obs: '' },
   { nome: 'Geral - MSS – Após mensal do Prestamista',     obs: 'Após Rotina Mensal Prestamista' },
   { nome: 'Recursos Humanos – MSS – Após job06 RH',       obs: 'Após contabilização da Folha de Pagamento' },
-  { nome: '',                                             obs: '' },
 ];
 
 // Rotinas Uniface Anual
