@@ -1,5 +1,6 @@
 [
-  { "username": "Coamo1",  "password": "Coamo1",   "role": "operador" },
-  { "username": "admin",   "password": "admin123",  "role": "admin"    },
-  { "username": "MFERRAZ", "password": "123456",    "role": "admin",   "primeiroAcesso": true }
+  { "username": "Coamo1",   "password": "Coamo1",   "role": "operador" },
+  { "username": "admin",    "password": "admin123",  "role": "admin"    },
+  { "username": "MFERRAZ",  "password": "123456",    "role": "admin",   "primeiroAcesso": true },
+  { "username": "lpereira", "password": "123456",    "role": "admin",   "primeiroAcesso": true }
 ]

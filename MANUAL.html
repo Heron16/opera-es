@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Manual do Sistema de Operações – Coamo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #222; background: #fff; font-size: 14px; }
+    .capa { background: #1a2233; color: #fff; text-align: center; padding: 80px 40px; page-break-after: always; }
+    .capa h1 { font-size: 2.2rem; color: #58a6ff; margin-bottom: 12px; }
+    .capa h2 { font-size: 1.2rem; color: #c9d1d9; font-weight: 400; margin-bottom: 40px; }
+    .capa .info { color: #8b949e; font-size: 0.95rem; margin-top: 60px; }
+    .capa .link { color: #58a6ff; font-size: 1rem; margin-top: 10px; }
+    .conteudo { max-width: 900px; margin: 0 auto; padding: 40px 40px; }
+    h2.secao { font-size: 1.4rem; color: #1a2233; border-bottom: 3px solid #58a6ff; padding-bottom: 8px; margin: 40px 0 20px; }
+    h3.sub { font-size: 1.05rem; color: #1a2233; margin: 24px 0 10px; }
+    p { margin-bottom: 10px; line-height: 1.7; }
+    ul, ol { margin: 8px 0 12px 24px; line-height: 1.8; }
+    .destaque { background: #f0f6ff; border-left: 4px solid #58a6ff; padding: 12px 16px; margin: 12px 0; border-radius: 4px; }
+    .aviso { background: #fff8e1; border-left: 4px solid #ffa000; padding: 12px 16px; margin: 12px 0; border-radius: 4px; }
+    .tabela { width: 100%; border-collapse: collapse; margin: 12px 0 20px; }
+    .tabela th { background: #1a2233; color: #fff; padding: 10px 12px; text-align: left; font-size: 0.9rem; }
+    .tabela td { padding: 8px 12px; border-bottom: 1px solid #e0e0e0; }
+    .tabela tr:nth-child(even) td { background: #f5f8ff; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 0.8rem; font-weight: 700; }
+    .badge.admin { background: #e8f5e9; color: #2e7d32; }
+    .badge.operador { background: #e3f2fd; color: #1565c0; }
+    .tela { border: 2px solid #ccc; border-radius: 8px; padding: 20px; margin: 16px 0; background: #1a2233; color: #c9d1d9; font-family: monospace; font-size: 0.85rem; }
+    .tela .header { color: #58a6ff; font-size: 1rem; font-weight: bold; margin-bottom: 8px; }
+    .tela .campo { background: #21262d; border: 1px solid #30363d; border-radius: 4px; padding: 6px 10px; margin: 4px 0; color: #e6edf3; }
+    .tela .btn { background: #1f6feb; color: #fff; border: none; border-radius: 6px; padding: 8px 20px; margin-top: 8px; }
+    .status-ex { display: inline-block; border: 1px solid #58a6ff; color: #58a6ff; background: rgba(88,166,255,0.08); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
+    .status-enc { display: inline-block; border: 1px solid #3fb950; color: #3fb950; background: rgba(63,185,80,0.08); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
+    .status-err { display: inline-block; border: 1px solid #f85149; color: #f85149; background: rgba(248,81,73,0.08); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
+    .numero { display: inline-block; background: #1a2233; color: #fff; border-radius: 50%; width: 26px; height: 26px; text-align: center; line-height: 26px; font-weight: bold; margin-right: 8px; font-size: 0.85rem; }
+    .passo { display: flex; align-items: flex-start; gap: 10px; margin: 10px 0; }
+    .passo-texto { flex: 1; line-height: 1.6; }
+    @media print {
+      .capa { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+      h2.secao { page-break-before: auto; }
+      .destaque, .aviso { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- CAPA -->
+<div class="capa">
+  <h1>⚙️ Sistema de Operações – Coamo</h1>
+  <h2>Manual do Usuário</h2>
+  <p style="color:#8b949e;font-size:1rem;">Rotinas, Escalas e Acompanhamento de Processos</p>
+  <div class="info">
+    <p>Versão 1.0 — Julho 2026</p>
+    <p>TI Coamo — Departamento de Operações</p>
+  </div>
+  <div class="link">🌐 https://opera-es-olive.vercel.app</div>
+</div>
+
+<!-- CONTEÚDO -->
+<div class="conteudo">
+
+  <!-- 1. VISÃO GERAL -->
+  <h2 class="secao">1. Visão Geral do Sistema</h2>
+  <p>O <strong>Sistema de Operações – Coamo</strong> é uma plataforma web para acompanhamento e controle das rotinas diárias, semanais e mensais executadas pela equipe de TI. O sistema permite registrar o status de cada rotina, horários de início e fim, e sincroniza as informações em tempo real entre todos os usuários logados.</p>
+
+  <div class="destaque">
+    <strong>Acesso ao sistema:</strong><br>
+    🌐 <strong>https://opera-es-olive.vercel.app</strong><br>
+    Funciona em qualquer navegador (Chrome, Edge, Firefox) em qualquer computador ou celular.
+  </div>
+
+  <h3 class="sub">Recursos principais</h3>
+  <ul>
+    <li>Controle de rotinas diárias, finais de semana e mensais</li>
+    <li>Acompanhamento do Corvu diário e mensal</li>
+    <li>Registro de horários de início e fim de cada rotina</li>
+    <li>Sincronização em tempo real entre usuários</li>
+    <li>Exportação para PDF das rotinas do dia</li>
+    <li>Gerenciamento de escalas por dia/mês na aba Horários</li>
+    <li>Controle de acesso por perfil (Operador / Admin)</li>
+  </ul>
+
+  <!-- 2. ACESSO E LOGIN -->
+  <h2 class="secao">2. Acesso e Login</h2>
+
+  <h3 class="sub">Como acessar</h3>
+  <div class="passo"><span class="numero">1</span><div class="passo-texto">Abra o navegador (Chrome ou Edge recomendado)</div></div>
+  <div class="passo"><span class="numero">2</span><div class="passo-texto">Digite o endereço: <strong>https://opera-es-olive.vercel.app</strong></div></div>
+  <div class="passo"><span class="numero">3</span><div class="passo-texto">Digite seu usuário e senha na tela de login</div></div>
+  <div class="passo"><span class="numero">4</span><div class="passo-texto">Clique em <strong>Entrar</strong> ou pressione <strong>Enter</strong></div></div>
+
+  <div class="tela">
+    <div class="header">⚙️ Operações</div>
+    <div style="color:#8b949e;font-size:0.8rem;margin-bottom:12px;">Sistema de Rotinas e Escalas</div>
+    <div class="campo">👤 Usuário</div>
+    <div class="campo">🔒 Senha</div>
+    <div><button class="btn">Entrar</button></div>
+  </div>
+
+  <div class="aviso">
+    <strong>⚠️ Primeiro acesso:</strong> No primeiro login, o sistema pedirá que você crie uma senha pessoal. A senha deve ter no mínimo 8 caracteres com letras maiúsculas, minúsculas, número e caractere especial (ex: <code>Coamo@2026!</code>).
+  </div>
+
+  <h3 class="sub">Usuários do sistema</h3>
+  <table class="tabela">
+    <tr><th>Usuário</th><th>Senha inicial</th><th>Perfil</th><th>Acesso</th></tr>
+    <tr><td>Coamo1</td><td>Coamo1</td><td><span class="badge operador">Operador</span></td><td>Visualiza e registra rotinas</td></tr>
+    <tr><td>admin</td><td>admin123</td><td><span class="badge admin">Admin</span></td><td>Acesso total + edita horários</td></tr>
+    <tr><td>MFERRAZ</td><td>123456 (trocar)</td><td><span class="badge admin">Admin</span></td><td>Acesso total + edita horários</td></tr>
+    <tr><td>lpereira</td><td>123456 (trocar)</td><td><span class="badge admin">Admin</span></td><td>Acesso total + edita horários</td></tr>
+  </table>
+
+  <div class="destaque">
+    <strong>Login flexível:</strong> O usuário pode ser digitado em maiúsculas ou minúsculas. Por exemplo, <code>mferraz</code>, <code>MFERRAZ</code> e <code>Mferraz</code> funcionam da mesma forma.
+  </div>
+
+  <!-- 3. ABAS DO SISTEMA -->
+  <h2 class="secao">3. Abas do Sistema</h2>
+  <p>Após o login, o sistema exibe as seguintes abas no topo da tela:</p>
+
+  <table class="tabela">
+    <tr><th>Aba</th><th>Descrição</th></tr>
+    <tr><td>📋 Diário</td><td>Rotinas Uniface do dia atual (manhã, tarde, noite e madrugada)</td></tr>
+    <tr><td>🖥️ Corvu Diário</td><td>Tabela de rotinas do Corvu — registra início, fim, servidor, usuário e terminal</td></tr>
+    <tr><td>📆 Final de Semana</td><td>Rotinas do sábado à noite e domingo</td></tr>
+    <tr><td>📅 Mensal</td><td>Rotinas Uniface mensais (virada do mês, primeiro dia, datas específicas)</td></tr>
+    <tr><td>🖥️ Corvu Mensal</td><td>Tabela Corvu mensal — executar somente após atualizar a data mensal do IEPA</td></tr>
+    <tr><td>📆 Anual</td><td>Rotinas anuais executadas quando solicitado pela Contabilidade/Gerac</td></tr>
+    <tr><td>🗓️ Horários</td><td>Escalas de trabalho por dia e mês (edição somente para Admin)</td></tr>
+  </table>
+
+  <div class="aviso">
+    <strong>⚠️ Aba do dia anterior:</strong> Quando existem rotinas de madrugada com status registrado do dia anterior (ex: rotinas após meia-noite do dia 30/06), o sistema cria automaticamente uma aba <strong>⚠️ Diário 30/06</strong> para manter o histórico sem afetar as rotinas do dia atual.
+  </div>
+
+  <!-- 4. ROTINAS DIÁRIAS -->
+  <h2 class="secao">4. Registrando Rotinas</h2>
+
+  <h3 class="sub">Status das rotinas</h3>
+  <p>Cada rotina possui um seletor de status na coluna direita:</p>
+  <ul>
+    <li><span class="status-ex">▶ Executando</span> — Rotina em andamento. A linha fica destacada em azul.</li>
+    <li><span class="status-enc">✔ Encerrado</span> — Rotina concluída. A linha fica esmaecida após informar o horário final.</li>
+    <li><span class="status-err">✖ Erro</span> — Rotina com problema. A linha fica vermelha e abre campo para descrever o erro e número do chamado.</li>
+  </ul>
+
+  <div class="destaque">
+    <strong>Importante:</strong> A linha só fica esmaecida (cinza) quando o status é <strong>Encerrado E o horário de fim foi preenchido</strong>. Enquanto não tiver o horário final, a linha continua destacada mesmo com status Encerrado.
+  </div>
+
+  <h3 class="sub">Registrando horários de início e fim</h3>
+  <p>Ao marcar uma rotina como <strong>Executando</strong>, aparecem os campos de horário:</p>
+  <ul>
+    <li>Campo <strong>Início</strong> — registre o horário que a rotina começou</li>
+    <li>Campo <strong>Fim</strong> — aparece quando o status é Encerrado ou Erro</li>
+  </ul>
+
+  <div class="destaque">
+    <strong>Atalho de hora atual:</strong> Com o campo de hora em branco, pressione <strong>TAB</strong> para preencher automaticamente com a hora atual do computador.
+  </div>
+
+  <h3 class="sub">Bloqueando uma rotina</h3>
+  <p>O botão 🔒 ao lado de cada rotina serve para bloqueá-la quando não precisa ser executada naquele dia. A rotina fica com aparência riscada e não pode ser editada. Para desbloquear, clique em 🔓.</p>
+
+  <h3 class="sub">Rotinas com campos especiais</h3>
+  <p>Algumas rotinas possuem campos de texto adicionais no lugar do seletor de status, como <strong>OK / Sem arquivo</strong>, <strong>Brasil / Itaú / Bradesco</strong> ou <strong>Servidor / Terminal</strong>. Preencha esses campos e saia do campo (Tab ou clique em outro lugar) para salvar automaticamente.</p>
+
+  <!-- 5. CORVU -->
+  <h2 class="secao">5. Corvu Diário e Mensal</h2>
+
+  <p>As abas <strong>Corvu Diário</strong> e <strong>Corvu Mensal</strong> apresentam uma tabela com as rotinas do Corvu. Para cada linha, preencha:</p>
+
+  <table class="tabela">
+    <tr><th>Campo</th><th>O que registrar</th></tr>
+    <tr><td>Início</td><td>Horário que a rotina do Corvu iniciou</td></tr>
+    <tr><td>Fim</td><td>Horário que a rotina finalizou</td></tr>
+    <tr><td>Servidor</td><td>Nome do servidor utilizado (ex: UNIFACEBG01)</td></tr>
+    <tr><td>Usuário</td><td>Usuário logado no Corvu (ex: OPERADOR1)</td></tr>
+    <tr><td>Terminal</td><td>Terminal utilizado (ex: T01)</td></tr>
+  </table>
+
+  <div class="destaque">
+    <strong>Salvamento automático:</strong> Os dados são salvos automaticamente ao sair de cada campo (Tab ou clique em outro lugar). O sistema sincroniza com o servidor e outros usuários veem as informações em tempo real.
+  </div>
+
+  <div class="aviso">
+    <strong>⚠️ Corvu Mensal:</strong> As rotinas do Corvu Mensal devem ser executadas <strong>somente após atualizar a data mensal do IEPA</strong> no Uniface. O aviso aparece no topo da aba.
+  </div>
+
+  <h3 class="sub">Bloqueando linha do Corvu</h3>
+  <p>O botão 🔒 no final de cada linha permite bloquear uma rotina Corvu que não será executada. A linha fica riscada e os campos ficam desabilitados.</p>
+
+  <!-- 6. SINCRONIZAÇÃO -->
+  <h2 class="secao">6. Sincronização em Tempo Real</h2>
+
+  <p>O sistema sincroniza os dados entre todos os usuários a cada <strong>3 segundos</strong>. Isso significa:</p>
+  <ul>
+    <li>Se um operador marcar uma rotina como <strong>Executando</strong>, todos os outros usuários verão essa mudança em até 3 segundos</li>
+    <li>Não é necessário recarregar a página</li>
+    <li>O relógio no topo da tela atualiza a cada segundo</li>
+  </ul>
+
+  <div class="destaque">
+    <strong>Indicador de salvamento:</strong> Quando há dados sendo enviados para o servidor, aparece o indicador <strong>⏳ Salvando...</strong> ao lado do nome do usuário. Quando desaparece, os dados foram salvos com sucesso.
+  </div>
+
+  <!-- 7. HORÁRIOS -->
+  <h2 class="secao">7. Gerenciamento de Horários</h2>
+
+  <p>A aba <strong>🗓️ Horários</strong> permite cadastrar as escalas de trabalho por dia. Apenas usuários com perfil <strong>Admin</strong> podem editar os horários.</p>
+
+  <h3 class="sub">Como adicionar um dia</h3>
+  <div class="passo"><span class="numero">1</span><div class="passo-texto">Clique em <strong>+ Adicionar Dia</strong></div></div>
+  <div class="passo"><span class="numero">2</span><div class="passo-texto">Selecione a data no calendário</div></div>
+  <div class="passo"><span class="numero">3</span><div class="passo-texto">Clique em <strong>Adicionar</strong></div></div>
+  <div class="passo"><span class="numero">4</span><div class="passo-texto">Preencha os turnos: horário, nome(s) e observação</div></div>
+  <div class="passo"><span class="numero">5</span><div class="passo-texto">Clique em <strong>+ Turno</strong> para adicionar mais turnos no mesmo dia</div></div>
+
+  <p>Use as setas <strong>‹ ›</strong> para navegar entre os meses. O dia atual aparece destacado com o badge <strong>HOJE</strong>.</p>
+
+  <!-- 8. EXPORTAR PDF -->
+  <h2 class="secao">8. Exportar PDF</h2>
+
+  <p>O botão <strong>🖨️ Exportar PDF</strong> no topo da tela permite imprimir ou salvar como PDF a aba que está aberta no momento.</p>
+
+  <h3 class="sub">Como exportar</h3>
+  <div class="passo"><span class="numero">1</span><div class="passo-texto">Navegue até a aba que deseja exportar (ex: Diário, Mensal, Corvu)</div></div>
+  <div class="passo"><span class="numero">2</span><div class="passo-texto">Clique em <strong>🖨️ Exportar PDF</strong></div></div>
+  <div class="passo"><span class="numero">3</span><div class="passo-texto">Na janela de impressão, selecione <strong>Salvar como PDF</strong> como destino</div></div>
+  <div class="passo"><span class="numero">4</span><div class="passo-texto">Clique em <strong>Salvar</strong></div></div>
+
+  <div class="destaque">
+    O PDF gerado mostra apenas a aba ativa, com os status e horários registrados, sem os controles de edição. O nome do arquivo é gerado automaticamente com o tipo e a data (ex: <code>Diaria_15-07-2026.pdf</code>).
+  </div>
+
+  <!-- 9. PERMISSÕES -->
+  <h2 class="secao">9. Perfis de Acesso</h2>
+
+  <table class="tabela">
+    <tr><th>Funcionalidade</th><th><span class="badge operador">Operador</span></th><th><span class="badge admin">Admin</span></th></tr>
+    <tr><td>Ver rotinas e Corvu</td><td>✅</td><td>✅</td></tr>
+    <tr><td>Marcar status das rotinas</td><td>✅</td><td>✅</td></tr>
+    <tr><td>Registrar horários de início/fim</td><td>✅</td><td>✅</td></tr>
+    <tr><td>Preencher campos do Corvu</td><td>✅</td><td>✅</td></tr>
+    <tr><td>Bloquear/desbloquear rotinas</td><td>✅</td><td>✅</td></tr>
+    <tr><td>Exportar PDF</td><td>✅</td><td>✅</td></tr>
+    <tr><td>Editar escalas de horários</td><td>❌</td><td>✅</td></tr>
+    <tr><td>Adicionar/remover dias na escala</td><td>❌</td><td>✅</td></tr>
+  </table>
+
+  <!-- 10. DICAS -->
+  <h2 class="secao">10. Dicas e Atalhos</h2>
+
+  <table class="tabela">
+    <tr><th>Ação</th><th>Como fazer</th></tr>
+    <tr><td>Preencher hora atual automaticamente</td><td>Deixe o campo de hora vazio e pressione <strong>TAB</strong></td></tr>
+    <tr><td>Confirmar login</td><td>Pressione <strong>Enter</strong> na tela de login</td></tr>
+    <tr><td>Navegar entre campos</td><td>Pressione <strong>TAB</strong></td></tr>
+    <tr><td>Exportar PDF da aba atual</td><td>Clique em <strong>🖨️ Exportar PDF</strong> ou pressione <strong>Ctrl+P</strong></td></tr>
+    <tr><td>Ver rotinas do dia anterior</td><td>Clique na aba <strong>⚠️ Diário DD/MM</strong> que aparece automaticamente</td></tr>
+    <tr><td>Sair do sistema</td><td>Clique em <strong>Sair</strong> no topo direito</td></tr>
+  </table>
+
+  <h3 class="sub">Comportamento da linha ao registrar status</h3>
+  <ul>
+    <li><strong>Sem status</strong> — linha normal, fundo escuro</li>
+    <li><strong>Executando</strong> — linha destacada com borda azul</li>
+    <li><strong>Encerrado (sem horário final)</strong> — linha ainda destacada em azul</li>
+    <li><strong>Encerrado (com horário final)</strong> — linha esmaecida (concluída)</li>
+    <li><strong>Erro</strong> — linha com borda vermelha, campos para descrever o erro e número do chamado</li>
+    <li><strong>Bloqueada</strong> — linha riscada com badge BLOQUEADA</li>
+  </ul>
+
+  <!-- 11. INFORMAÇÕES TÉCNICAS -->
+  <h2 class="secao">11. Informações Técnicas</h2>
+
+  <table class="tabela">
+    <tr><th>Item</th><th>Detalhe</th></tr>
+    <tr><td>URL do sistema</td><td>https://opera-es-olive.vercel.app</td></tr>
+    <tr><td>Hospedagem</td><td>Vercel (serverless)</td></tr>
+    <tr><td>Banco de dados</td><td>Upstash Redis (nuvem)</td></tr>
+    <tr><td>Repositório</td><td>https://github.com/Heron16/opera-es</td></tr>
+    <tr><td>Atualização automática</td><td>A cada push no GitHub, o Vercel faz redeploy automático</td></tr>
+    <tr><td>Sessão</td><td>12 horas — após esse tempo é necessário fazer login novamente</td></tr>
+    <tr><td>Sincronização</td><td>A cada 3 segundos entre os usuários</td></tr>
+  </table>
+
+  <div style="text-align:center;margin-top:60px;color:#8b949e;font-size:0.85rem;border-top:1px solid #eee;padding-top:20px;">
+    Sistema de Operações – Coamo &nbsp;|&nbsp; Manual do Usuário &nbsp;|&nbsp; Julho 2026
+  </div>
+
+</div>
+</body>
+</html>
