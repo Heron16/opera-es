@@ -44,13 +44,10 @@ async function redisGet(chave) {
 
 async function redisSet(chave, valor) {
   if (!REDIS_URL || !REDIS_TOKEN) return;
-  await fetch(`${REDIS_URL}/set/${encodeURIComponent(chave)}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${REDIS_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ value: valor }),
+  // Upstash REST API: valor vai direto na URL como parâmetro
+  await fetch(`${REDIS_URL}/set/${encodeURIComponent(chave)}/${encodeURIComponent(valor)}`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
   });
 }
 
