@@ -22,7 +22,13 @@
   ],
   "headers": [
     {
-      "source": "/(.*\\.(html|js))",
+      "source": "/:path*.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/:path*.js",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
       ]
