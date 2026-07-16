@@ -10,8 +10,10 @@ const REDIS_CHAVE_DADOS    = 'coamo:dados';
 const REDIS_CHAVE_USUARIOS = 'coamo:users';
 
 const USUARIOS_PADRAO = [
-  { username: 'Coamo1', password: 'Coamo1',  role: 'operador' },
-  { username: 'admin',  password: 'admin123', role: 'admin'    },
+  { username: 'Coamo1',   password: 'Coamo1',   role: 'operador' },
+  { username: 'admin',    password: 'admin123',  role: 'admin'    },
+  { username: 'MFERRAZ',  password: '123456',    role: 'admin',   primeiroAcesso: true },
+  { username: 'lpereira', password: '123456',    role: 'admin',   primeiroAcesso: true },
 ];
 
 // ── Body parser manual (Vercel não parseia req.body automaticamente) ──

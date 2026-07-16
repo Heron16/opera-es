@@ -12,7 +12,8 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ erro: 'Usuário e senha são obrigatórios' });
 
   const usuarios = await lerUsuarios();
-  const usuario  = usuarios.find(u => u.username === username);
+  // Busca ignorando maiúsculas/minúsculas
+  const usuario  = usuarios.find(u => u.username.toLowerCase() === username.toLowerCase());
   if (!usuario || !(await verificarSenha(password, usuario)))
     return res.status(401).json({ erro: 'Usuário ou senha incorretos' });
 
