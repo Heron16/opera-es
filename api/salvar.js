@@ -9,9 +9,16 @@ module.exports = async function handler(req, res) {
   const usuario = verificarToken(req);
   if (!usuario) return res.status(401).json({ erro: 'Não autenticado' });
 
-  const body = await parseBody(req);
-  const { chave, valor } = body;
-  if (!chave) return res.status(400).json({ erro: 'Chave obrigatória' });
+  // Tenta req.body primeiro (Vercel pode já parsear), senão usa parseBody
+  let body = req.body;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    body = await parseBody(req);
+  }
+
+  const chave = body.chave;
+  const valor = body.valor;
+
+  if (!chave) return res.status(400).json({ erro: 'Chave obrigatória', body_recebido: JSON.stringify(body).substring(0,200) });
 
   if (chave.startsWith('horarios_') && usuario.role !== 'admin')
     return res.status(403).json({ erro: 'Apenas administradores podem editar horários.' });
