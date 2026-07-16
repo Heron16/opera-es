@@ -563,6 +563,12 @@ function getCorvuDados(p) {
   }
   try { return JSON.parse(lerChave('corvu_dados_'+p) || '{}'); } catch { return {}; }
 }
+// Marca timestamp local de uma chave para proteger do polling por 15s
+// Chamado no oninput dos campos Corvu para proteger antes do blur/save
+function marcarEdicaoLocal(chave) {
+  _localTimestamp[chave] = Date.now();
+}
+
 async function saveCorvuCampo(p, idx, campo, val) {
   // Para o corvu diário, salva com chave datada
   const chave = p === 'corvu' ? 'corvu_dados_corvu_' + diaAtual : 'corvu_dados_' + p;
@@ -773,9 +779,9 @@ function renderRotinas(tabId,rotinas,p,dk) {
           <td class="corvu-nome">${r.texto}</td>
           <td><input type="time" class="corvu-input" value="${d.inicio||''}" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'inicio',this.value)" onkeydown="autoHoraTabCorvu(event,this,'${corvuPrefix}',${idx},'inicio')"></td>
           <td><input type="time" class="corvu-input" value="${d.fim||''}" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'fim',this.value)" onkeydown="autoHoraTabCorvu(event,this,'${corvuPrefix}',${idx},'fim')"></td>
-          <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'servidor',this.value)"></td>
-          <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'usuario',this.value)"></td>
-          <td><input type="text" class="corvu-input upper" placeholder="Terminal" value="${d.terminal||''}" oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'terminal',this.value)"></td>
+          <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_${corvuPrefix}')" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'servidor',this.value)"></td>
+          <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_${corvuPrefix}')" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'usuario',this.value)"></td>
+          <td><input type="text" class="corvu-input upper" placeholder="Terminal" value="${d.terminal||''}" oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_${corvuPrefix}')" onblur="saveCorvuCampo('${corvuPrefix}',${idx},'terminal',this.value)"></td>
         </tr>`;
       });
       html+=`</tbody></table></div></div>`;
@@ -827,9 +833,9 @@ function renderCorvu(tabId,lista,p) {
       ${isMenual?`<td class="corvu-obs-cell">${obs}</td>`:''}
       <td><input type="time" class="corvu-input" value="${d.inicio||''}" ${isB?'disabled':''} onblur="saveCorvuCampo('${p}',${idx},'inicio',this.value)" onkeydown="autoHoraTabCorvu(event,this,'${p}',${idx},'inicio')"></td>
       <td><input type="time" class="corvu-input" value="${d.fim||''}" ${isB?'disabled':''} onblur="saveCorvuCampo('${p}',${idx},'fim',this.value)" onkeydown="autoHoraTabCorvu(event,this,'${p}',${idx},'fim')"></td>
-      <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampo('${p}',${idx},'servidor',this.value)"></td>
-      <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampo('${p}',${idx},'usuario',this.value)"></td>
-      <td><input type="text" class="corvu-input upper" placeholder="Terminal" value="${d.terminal||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampo('${p}',${idx},'terminal',this.value)"></td>
+      <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_${p==='corvu'?'corvu_'+diaAtual:p}')" onblur="saveCorvuCampo('${p}',${idx},'servidor',this.value)"></td>
+      <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_${p==='corvu'?'corvu_'+diaAtual:p}')" onblur="saveCorvuCampo('${p}',${idx},'usuario',this.value)"></td>
+      <td><input type="text" class="corvu-input upper" placeholder="Terminal" value="${d.terminal||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_${p==='corvu'?'corvu_'+diaAtual:p}')" onblur="saveCorvuCampo('${p}',${idx},'terminal',this.value)"></td>
       ${comBloqueio?`<td><button class="btn-block ${isB?'unblock':''}" onclick="toggleCorvuBlock('${p}',${idx})">${isB?'🔓':'🔒'}</button></td>`:''}
     </tr>`;
   });
@@ -860,9 +866,9 @@ function renderCorvuDia(containerId, lista, diaKey) {
       <td class="corvu-nome">${nome}${isB ? '<span class="badge-bloqueada">BLOQUEADA</span>' : ''}</td>
       <td><input type="time" class="corvu-input" value="${d.inicio||''}" ${isB?'disabled':''} onblur="saveCorvuCampoDia('${diaKey}',${idx},'inicio',this.value)" onkeydown="autoHoraTabCorvuDia(event,this,'${diaKey}',${idx},'inicio')"></td>
       <td><input type="time" class="corvu-input" value="${d.fim||''}" ${isB?'disabled':''} onblur="saveCorvuCampoDia('${diaKey}',${idx},'fim',this.value)" onkeydown="autoHoraTabCorvuDia(event,this,'${diaKey}',${idx},'fim')"></td>
-      <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampoDia('${diaKey}',${idx},'servidor',this.value)"></td>
-      <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampoDia('${diaKey}',${idx},'usuario',this.value)"></td>
-      <td><input type="text" class="corvu-input upper" placeholder="Terminal" value="${d.terminal||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase()" onblur="saveCorvuCampoDia('${diaKey}',${idx},'terminal',this.value)"></td>
+      <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_corvu_${diaKey}')" onblur="saveCorvuCampoDia('${diaKey}',${idx},'servidor',this.value)"></td>
+      <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_corvu_${diaKey}')" onblur="saveCorvuCampoDia('${diaKey}',${idx},'usuario',this.value)"></td>
+      <td><input type="text" class="corvu-input upper" placeholder="Terminal" value="${d.terminal||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_corvu_${diaKey}')" onblur="saveCorvuCampoDia('${diaKey}',${idx},'terminal',this.value)"></td>
       <td><button class="btn-block ${isB?'unblock':''}" onclick="toggleCorvuBlockDia('${diaKey}',${idx})">${isB?'🔓':'🔒'}</button></td>
     </tr>`;
   });
