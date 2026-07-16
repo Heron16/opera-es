@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "buildCommand": "",
+  "outputDirectory": ".",
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "routes": [
+    { "src": "/api/login",        "dest": "/api/login.js" },
+    { "src": "/api/dados",        "dest": "/api/dados.js" },
+    { "src": "/api/salvar",       "dest": "/api/salvar.js" },
+    { "src": "/api/migrar",       "dest": "/api/migrar.js" },
+    { "src": "/api/trocar-senha", "dest": "/api/trocar-senha.js" },
+    {
+      "src": "/(dados\\.json|users\\.json|server\\.js|package\\.json|package-lock\\.json|\\.env|servidor\\.ps1|servico_wrapper\\.ps1|INSTALAR_SERVICO_TI\\.ps1|DESINSTALAR_SERVICO_TI\\.ps1)",
+      "status": 403,
+      "dest": "/index.html"
+    },
+    { "src": "/(.*)", "dest": "/$1" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*\\.(html|js))",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    }
+  ]
+}

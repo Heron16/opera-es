@@ -53,7 +53,7 @@
 <header>
   <h1>⚙️ Sistema de Operações – Coamo</h1>
   <div class="header-right">
-    <span id="relogioHeader" style="color:#aaa;font-size:0.85rem;"></span>
+    <span id="relogioHeader"></span>
     <span class="user-badge" id="userBadge"></span>
     <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
@@ -118,7 +118,8 @@ let mesAtual = new Date().getMonth();
 let anoAtual = new Date().getFullYear();
 
 const USAR_API = location.protocol === 'http:' || location.protocol === 'https:';
-const API_URL  = '/api/dados';
+const API_URL       = '/api/dados';
+const API_SALVAR    = '/api/salvar';
 let _cache = {};
 
 async function carregarDadosServidor() {
@@ -136,10 +137,10 @@ async function salvarChave(chave, valor) {
   if (USAR_API) _cache[chave] = valorStr;
   if (!USAR_API) return;
   try {
-    await fetch(`${API_URL}/${encodeURIComponent(chave)}`, {
+    await fetch(API_SALVAR, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ valor: valorStr })
+      body: JSON.stringify({ chave, valor: valorStr })
     });
   } catch {}
 }

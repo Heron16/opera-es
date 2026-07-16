@@ -406,7 +406,8 @@ let diaAtual = getDiaKey();
 // ── STORAGE (API servidor + localStorage fallback) ────────────────────
 // Sempre usa API (o site roda no servidor)
 const USAR_API = location.protocol === 'http:' || location.protocol === 'https:';
-const API_URL  = '/api/dados';
+const API_URL       = '/api/dados';
+const API_SALVAR    = '/api/salvar';
 
 // Cache local dos dados (evita leituras repetidas)
 let _cache = {};
@@ -444,10 +445,10 @@ async function salvarChave(chave, valor) {
   // Marca como pendente (será reenviado se falhar)
   _filaSalvamento[chave] = valorStr;
   try {
-    const r = await fetch(`${API_URL}/${encodeURIComponent(chave)}`, {
+    const r = await fetch(API_SALVAR, {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ valor: valorStr })
+      body: JSON.stringify({ chave, valor: valorStr })
     });
     if (r.ok) {
       delete _filaSalvamento[chave]; // removido da fila após sucesso
@@ -460,10 +461,10 @@ async function flushPendentes() {
   const chaves = Object.keys(_filaSalvamento);
   for (const chave of chaves) {
     try {
-      const r = await fetch(`${API_URL}/${encodeURIComponent(chave)}`, {
+      const r = await fetch(API_SALVAR, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ valor: _filaSalvamento[chave] })
+        body: JSON.stringify({ chave, valor: _filaSalvamento[chave] })
       });
       if (r.ok) delete _filaSalvamento[chave];
     } catch { break; } // servidor ainda offline, tenta na próxima
@@ -655,8 +656,10 @@ function buildRotinaHtml(r,p,dk,blocked,status,agora,temHora,badge) {
   let cls='rotina-item';
   if(isBlocked)cls+=' blocked';
   else if(st==='erro')cls+=' erro';
-  // done: encerrado E com horário de fim preenchido
+  // done: encerrado E com horário de fim preenchido — só escurece depois do fim
   else if(st==='encerrado' && info.fim && info.fim.trim()!=='')cls+=' done';
+  // encerrado sem fim: mantém visual de "em andamento" até informar o horário final
+  else if(st==='encerrado' && (!info.fim || info.fim.trim()===''))cls+=' current';
   else if(st==='executando'||isCurrent)cls+=' current';
   // rotinas semStatus ficam escuras quando qualquer campo foi preenchido
   // se todosOsCampos:true, só fica verde quando TODOS os campos estiverem preenchidos
@@ -732,6 +735,12 @@ function renderRotinas(tabId,rotinas,p,dk) {
   const blocked=getBlocked(p,dk), status=getStatus(p,dk), agora=horaAtual();
   const temHora=(p==='diario'||p==='fds'||p==='mensal'||p==='anual');
 
+  // Seções que pertencem ao dia anterior (madrugada) e NÃO devem aparecer na aba do dia atual
+  // quando já existe uma aba dinâmica do dia anterior ativa
+  const ehAbaDiaAtual = (p === 'diario' && dk === diaAtual);
+  const diasAnt = ehAbaDiaAtual ? getDiasAnterioresComPendentes() : [];
+  const temAbaDiaAnterior = diasAnt.length > 0;
+
   // Seções que devem ser renderizadas como tabela Corvu
   const secoesCorvu = new Set(['Corvu Sábado','Corvu Domingo']);
 
@@ -745,6 +754,10 @@ function renderRotinas(tabId,rotinas,p,dk) {
   rotinas.forEach(r=>{ if(!secoes[r.secao])secoes[r.secao]=[]; secoes[r.secao].push(r); });
 
   Object.entries(secoes).forEach(([sec,items])=>{
+    // Na aba do dia atual, quando existe aba do dia anterior,
+    // oculta as seções de madrugada (elas ficam na aba do dia anterior)
+    if(ehAbaDiaAtual && temAbaDiaAnterior && SECOES_DIA_ANTERIOR.has(sec)) return;
+
     if(secoesCorvu.has(sec)) {
       // Renderiza como tabela Corvu inline
       const corvuPrefix = 'corvufds_' + sec.replace(/\s+/g,'_').toLowerCase();

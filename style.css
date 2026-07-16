@@ -144,10 +144,10 @@ header h1 { font-size: 1.1rem; color: #58a6ff; font-weight: 600; letter-spacing:
 /* Coluna direita de cada rotina */
 .rotina-actions {
   display: flex; flex-direction: column; gap: 5px;
-  min-width: 230px; flex-shrink: 0;
+  min-width: 240px; width: 240px; flex-shrink: 0;
 }
 .rotina-actions-row {
-  display: flex; gap: 4px; align-items: center; flex-wrap: wrap;
+  display: flex; gap: 4px; align-items: center; flex-wrap: nowrap;
 }
 
 /* Todos os controles interativos têm a mesma altura e fonte */
@@ -166,9 +166,9 @@ header h1 { font-size: 1.1rem; color: #58a6ff; font-weight: 600; letter-spacing:
   font-family: inherit;
 }
 
-/* SELECT de status — ocupa o espaço disponível */
+/* SELECT de status — largura fixa para consistência em todas as abas */
 .status-select {
-  flex: 1; min-width: 0;
+  flex: 1; min-width: 120px;
   padding: 0 6px;
   cursor: pointer;
 }
@@ -179,7 +179,7 @@ header h1 { font-size: 1.1rem; color: #58a6ff; font-weight: 600; letter-spacing:
 
 /* Botão de bloquear — tamanho fixo */
 .btn-block {
-  width: 30px; min-width: 30px;
+  width: 30px; min-width: 30px; max-width: 30px;
   padding: 0;
   cursor: pointer;
   transition: all 0.15s;
@@ -195,7 +195,7 @@ header h1 { font-size: 1.1rem; color: #58a6ff; font-weight: 600; letter-spacing:
 
 /* Campo OK / texto extra — cresce para ocupar espaço disponível */
 .campo-extra {
-  flex: 1; min-width: 45px;
+  flex: 1; min-width: 50px;
   padding: 0 6px;
 }
 .campo-extra:focus { border-color: #58a6ff; }
@@ -219,17 +219,17 @@ header h1 { font-size: 1.1rem; color: #58a6ff; font-weight: 600; letter-spacing:
 .campo-label {
   font-size: 0.72rem; color: #8b949e;
   white-space: nowrap; font-weight: 500;
-  flex-shrink: 0; min-width: 44px;
+  flex-shrink: 0; min-width: 52px; max-width: 80px;
 }
 
 /* Campos de hora Início / Fim */
-.hora-row { gap: 4px; flex-wrap: nowrap; }
+.hora-row { gap: 6px; flex-wrap: nowrap; align-items: center; margin-top: 3px; }
 .hora-label {
   font-size: 0.72rem; color: #8b949e;
-  white-space: nowrap; flex-shrink: 0;
+  white-space: nowrap; flex-shrink: 0; min-width: 32px;
 }
 .hora-input {
-  width: 82px; min-width: 82px; max-width: 82px;
+  width: 88px; min-width: 88px; max-width: 88px;
   padding: 0 4px;
 }
 .hora-input:focus { border-color: #58a6ff; }

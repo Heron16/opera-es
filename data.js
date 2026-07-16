@@ -283,64 +283,23 @@ const ROTINAS_MENSAL = [
   { id:'m36', hora:'Após dia 10',                               texto:'Mensal - Geração Arquivo NF Exportação',                    obs:'Fatpem',                                                                     caminho:'Serviço Batch\\Fatpem\\Mensal - Geração Arquivo NF Exportação',                            secao:'Datas específicas' },
   { id:'m37', hora:'Quando solicitado',                         texto:'Restore bácula',                                            obs:'G:/ARQUIVOS/SEDE/SUPERLOG/GELOG/GEPAR/Depto Adm Paranagua/Restore/',         caminho:'G:/ARQUIVOS/SEDE/SUPERLOG/GELOG/GEPAR/Depto Adm Paranagua/Restore/',                       secao:'Datas específicas' },
 ];
-
-// Rotinas Unimed
-const ROTINAS_UNIMED = [
-  { id:'u1', hora:'Dia 10 após 18:00h', texto:'Rotina Unimed Rural - Gera Arquivo de Usuários Co-participativo', obs:'Gera arquivo U183xxx.183 - Enviar Unimed | Admfs02\\corporativo_des\\produção\\arquivos\\pseg', caminho:'Serviço Batch/Cooperados/Rotinas Unimed/Rotina Unimed Rural - Gera Arquivo de', secao:'Dia 10' },
-  { id:'u2', hora:'Dia 10 após 18:00h', texto:'Rotina Unimed Rural Co-participativo - Gera Comissões Unimed Co-participativo', obs:'Gera as comissões do mês do plano', caminho:'Serviço Batch/Rotina Unimed Rural Co-participativo - Gera Comissões Unimed Co-', secao:'Dia 10' },
-  { id:'u3', hora:'Dia 10 após 18:00h', texto:'Rotina Unimed Coamo Essencial - Gera Arquivos de Movimentações Para Unimed', obs:'Gera arquivo U183xxx.183 – Enviar', caminho:'Serviço Batch/Rotina Unimed Coamo Essencial - Gera Arquivos de Movimentações', secao:'Dia 10' },
-  { id:'u4', hora:'Dia 10 após 18:00h', texto:'Rotina Unimed Coamo Essencial - Gera Faturamento Mensal', obs:'', caminho:'Serviço Batch/Rotina Unimed Coamo Essencial - Gera Faturamento Mensal', secao:'Dia 10' },
-  { id:'u5', hora:'Dia 10 - Após receber arquivo Unimed Essencial (MENmmaa.txt e SERmmaa.txt)', texto:'Ler Arquivo Fat. Unimed (Mensalidades)', obs:'', caminho:'Serviço Batch/Ler Arquivo Fat. Unimed (Mensalidades)', secao:'Dia 10' },
-  { id:'u6', hora:'Dia 10 - Após receber arquivo', texto:'Ler Arquivo Fat. Unimed (Serviços)', obs:'Executar sem arquivo', caminho:'Serviço Batch/Ler Arquivo Fat. Unimed (Serviços)', secao:'Dia 10' },
-  { id:'u7', hora:'Dia 10 - Após receber arquivo', texto:'Organizar Arquivos', obs:'', caminho:'Serviço Batch/Organizar Arquivos', secao:'Dia 10' },
-  { id:'u8', hora:'Dia 10 após 18:00h', texto:'Atualizar Diretórios – Adesão', obs:'', caminho:'Serviço Batch/Atualizar Diretórios – Adesão', secao:'Dia 10' },
-  { id:'u9', hora:'Dia 10 após 18:00h', texto:'Atualizar Diretórios Rural', obs:'Copia os arquivos para a pasta PSEG/aaaamm', caminho:'Serviço Batch/Atualizar Diretórios Rural', secao:'Dia 10' },
-  { id:'u10', hora:'Dia 15 após 18:00h', texto:'Rotina Unimed Co-participativo Adesão - Gera Movimentação Usuários/Contratante', obs:'\\pseg\\adesão\\...... Enviar Unimed', caminho:'Serviço Batch/Rotina Unimed Co-participativo Adesão - Gera Movimentação Usuár', secao:'Dia 15' },
-  { id:'u11', hora:'Dia 15 após 18:00h', texto:'Rotina Unimed Co-participativo Adesão - Gera Faturamento Mensal Unimed', obs:'', caminho:'Serviço Batch/Rotina Unimed Co-participativo Adesão - Gera Faturamento Mensal', secao:'Dia 15' },
-  { id:'u12', hora:'Dia 15 - Após receber arquivo ADESÃO', texto:'Ler Arquivo Faturamento Mensalidades', obs:'MENmmaa.txt – RemissaoMMAA.txt | Salvar em K:/corporativo_des/produção/arquivos/pseg/adesão', caminho:'Serviço Batch/Ler Arquivo Faturamento Mensalidades', secao:'Dia 15' },
-  { id:'u13', hora:'Dia 15 - Após receber arquivo', texto:'Ler Arquivo Faturamento dos Serviços', obs:'SERmmaa.txt', caminho:'Serviço Batch/Ler Arquivo Faturamento dos Serviços', secao:'Dia 15' },
-  { id:'u14', hora:'Dia 15 - Após receber arquivos', texto:'Concilia/Carga Comissão Paga', obs:'Comissão Coamo mmaaaa.txt | Salvar em K:/corporativo_des/produção/arquivos/pseg', caminho:'Serviço Batch/Comissão/Concilia/Carga Comissão Paga', secao:'Dia 15' },
-  { id:'u15', hora:'Dia 15 - Após receber arquivos', texto:'Concilia/Carga Comissão Aberta', obs:'Abertos mmaaaa.txt', caminho:'Serviço Batch/Concilia/Carga Comissão Aberta', secao:'Dia 15' },
-  { id:'u16', hora:'Dia 15 - Após receber arquivos', texto:'Concilia/Carga Comissão Migração', obs:'Migrações mmaaaa.txt – sem arquivo processar', caminho:'Serviço Batch/Concilia/Carga Comissão Migração', secao:'Dia 15' },
-  { id:'u17', hora:'Dia 20 a 21', texto:'Rotina Unimed Rural - Gera Movimentação Usuários/Contratante', obs:'Gera arquivo U183xxxx.183 - Enviar Unimed', caminho:'Serviço Batch/Cooperados/Rotinas Unimed/Rotina Unimed Rural - Gera Movimentaçã', secao:'Dia 20-25' },
-  { id:'u18', hora:'Dia 20 a 21', texto:'Rotina Unimed Rural - Gera Faturamento Mensal Unimed', obs:'', caminho:'Serviço Batch/Rotina Unimed Rural - Gera Faturamento Mensal Unimed', secao:'Dia 20-25' },
-  { id:'u19', hora:'Dia 20 a 25 - Após receber arquivo', texto:'Ler Arquivo Faturamento Mensal Unimed', obs:'Lê arquivo FATmmaa.TXT / Renomear Reemissão para RemissaoMMAA.txt | Se divergência: e-mail para Jeferson(Gerac) | Salvar em K:/corporativo_des/produção/arquivos/pseg', caminho:'Serviço Batch/Ler Arquivo Faturamento Mensal Unimed', secao:'Dia 20-25' },
-  { id:'u20', hora:'Após acerto inconsistência', texto:'Rotina Diária – UNIMED (executar à noite)', obs:'Serviço Batch/Cooperados/Rotina Diária – Unimed', caminho:'Serviço Batch/Cooperados/Rotinas Unimed/Rotina Diária – UNIMED (executar à noi', secao:'Dia 20-25' },
-  { id:'u21', hora:'Diária', texto:'Rotina Diária Unimed', obs:'Gera Arquivo - Sistemas/Cooperados/Unimed/Skyline/Unimed/outbox/COA0000X..ret | Enviar via SKYLINE | E-mail: jeniffer@unimedcampomourao.com.br / talita@unimedcampomourao.com.br', caminho:'Serviço Batch/Cooperados/Rotinas Unimed/Rotina Diária Unimed', secao:'Rotina Diária' },
-];
-
-// Rotinas Serasa
-const ROTINAS_SERASA = [
-  { id:'s1', hora:'A cada 15 dias após 00:00h', texto:'Conectar no Site SERASA – Produto 085', obs:'K:\\Corporativo_des\\Produção\\Arquivos\\Cser\\Serasa.txt | Site: https://st.serasaexperian.com.br | Tel: (11) 2847-9900', caminho:'Serviço Batch/Conectar no Site SERASA – Produto 085', secao:'Rotina Quinzenal' },
-  { id:'s2', hora:'A cada 15 dias após 00:00h', texto:'Quinz. - SERASA String Relato Analítico', obs:'Fatpem', caminho:'Serviço Batch/Fatpem/Quinz. - SERASA String Relato Analítico', secao:'Rotina Quinzenal' },
-  { id:'s3', hora:'05/04/2026', texto:'Job Semanal Serasa Remessa', obs:'Envio arquivo / Renomear arquivo | Arquivo: \\\\coamo\\fs\\coamo\\prod\\scac\\arquivos\\serasa_envio_deb.txt | Renomear: serasa_envio_deb_rem_ddmmaaaa.txt', caminho:'Serviço Batch/Job Semanal Serasa Remessa', secao:'Abril 2026' },
-  { id:'s4', hora:'05/04/2026', texto:'Receber arquivo e verificar inconsistência', obs:'Produto 012', caminho:'Serviço Batch/Receber arquivo e verificar inconsistência', secao:'Abril 2026' },
-  { id:'s5', hora:'12/04/2026', texto:'Job Semanal Serasa Remessa', obs:'Envio arquivo / Renomear arquivo', caminho:'Serviço Batch/Job Semanal Serasa Remessa', secao:'Abril 2026' },
-  { id:'s6', hora:'12/04/2026', texto:'Receber arquivo e verificar inconsistência', obs:'', caminho:'Serviço Batch/Receber arquivo e verificar inconsistência', secao:'Abril 2026' },
-  { id:'s7', hora:'12/04/2026 - Conciliação', texto:'Receber arquivo Conciliação Serasa', obs:'Renomear: serasa_receb_deb.txt | Arquivo em: \\\\coamo\\fs\\coamo\\prod\\scac\\arquivos\\ | Após rotina remessa - Domingo após segundo sábado do mês', caminho:'Serviço Batch/Receber arquivo Conciliação Serasa', secao:'Conciliação' },
-  { id:'s8', hora:'12/04/2026 - Conciliação', texto:'Job Semanal Serasa Conciliação', obs:'Enviar arquivo / Renomear: serasa_envio_deb_conc_ddmmaaaa.txt | Arquivo: \\\\coamo\\fs\\coamo\\prod\\scac\\arquivos\\serasa_envio_deb.txt', caminho:'Serviço Batch/Job Semanal Serasa Conciliação', secao:'Conciliação' },
-  { id:'s9', hora:'12/04/2026 - Conciliação', texto:'Receber arquivo e verificar inconsistência', obs:'', caminho:'Serviço Batch/Receber arquivo e verificar inconsistência', secao:'Conciliação' },
-  { id:'s10', hora:'19/04/2026', texto:'Job Semanal Serasa Remessa', obs:'Envio arquivo / Renomear arquivo', caminho:'Serviço Batch/Job Semanal Serasa Remessa', secao:'Abril 2026' },
-  { id:'s11', hora:'19/04/2026', texto:'Receber arquivo e verificar inconsistência', obs:'', caminho:'Serviço Batch/Receber arquivo e verificar inconsistência', secao:'Abril 2026' },
-  { id:'s12', hora:'26/04/2026', texto:'Job Semanal Serasa Remessa', obs:'Envio arquivo / Renomear arquivo', caminho:'Serviço Batch/Job Semanal Serasa Remessa', secao:'Abril 2026' },
-  { id:'s13', hora:'26/04/2026', texto:'Receber arquivo e verificar inconsistência', obs:'', caminho:'Serviço Batch/Receber arquivo e verificar inconsistência', secao:'Abril 2026' },
-];
-
 // Rotinas Corvu Mensal
 // Executar somente após atualizar a data mensal do IEPA
 const ROTINAS_CORVU_MENSAL = [
-  { nome: 'Contas a Pagar - MSS',                    obs: 'Após atualizar data e Uniface Atualização Contas a Pagar Corvu' },
-  { nome: 'Almoxarifado - MSS',                       obs: 'Após Corvu Diário Almox/Frota e após atualizar a data' },
-  { nome: 'Frota - MSS',                              obs: 'Último dia do mês após atualizar a data' },
-  { nome: '1 - Produtos Agrícolas - MSS',             obs: 'Após Uniface - Atualiza data mensal do IEPA' },
-  { nome: '2 - Atuação Unidades - MSS',               obs: 'Após Uniface - Atualiza data mensal do IEPA' },
-  { nome: 'Bens de Fornecimento - MSS',               obs: '' },
-  { nome: 'Cobrança - MSS - ap. Bens Fornec-MSS',     obs: '' },
-  { nome: 'Cobrança - após cobrança - MSS',           obs: '' },
-  { nome: 'Credicoamo Mensal - MSS',                  obs: '' },
-  { nome: 'Imobilizado - MSS',                        obs: '' },
-  { nome: 'Geral - MSS – Após mensal do Prestamista', obs: 'Após Rotina Mensal Prestamista' },
-  { nome: 'Recursos Humanos – MSS – Após job06 RH',  obs: 'Após contabilização da Folha de Pagamento' },
+  { nome: 'Contas a Pagar - MSS',                        obs: 'Após atualizar data e Uniface Atualização Contas a Pagar Corvu' },
+  { nome: 'Almoxarifado - MSS',                           obs: 'Após Corvu Diário Almox/Frota e após atualizar a data' },
+  { nome: 'Frota - MSS',                                  obs: 'Último dia do mês após atualizar a data' },
+  { nome: '1 - Produtos Agrícolas - MSS',                 obs: 'Após Uniface - Atualiza data mensal do IEPA' },
+  { nome: '2 - Atuação Unidades - MSS',                   obs: 'Após Uniface - Atualiza data mensal do IEPA' },
+  { nome: 'Bens de Fornecimento - MSS',                   obs: '' },
+  { nome: 'Cobrança - MSS - ap. Bens Fornec-MSS',         obs: '' },
+  { nome: 'Cobrança - após cobrança - MSS',               obs: '' },
+  { nome: 'Credicoamo Mensal - MSS',                      obs: '' },
+  { nome: 'Imobilizado - MSS',                            obs: '' },
+  { nome: 'Geral - MSS – Após mensal do Prestamista',     obs: 'Após Rotina Mensal Prestamista' },
+  { nome: 'Recursos Humanos – MSS – Após job06 RH',       obs: 'Após contabilização da Folha de Pagamento' },
+  { nome: 'Comercial Representante - MSS',                obs: 'Após Uniface Mensal – Comissão do Fatpem e Cobrança Mensal – MSS' },
+  { nome: '',                                             obs: '' },
 ];
 
 // Rotinas Uniface Anual
