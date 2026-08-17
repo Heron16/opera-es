@@ -8,7 +8,7 @@
   <style>
     /* ── PRINT / PDF ── */
     @media print {
-      header, .tabs, .btn-exportar, .btn-block, .btn-logout,
+      header, .tabs, .btn-exportar, .btn-block, .btn-logout, .btn-gerenciar,
       .rotina-actions select, .rotina-actions button,
       input, textarea, select { display: none !important; }
       body { background: #fff !important; color: #000 !important; }
@@ -52,6 +52,14 @@
 
     /* Ocultar linhas PDF fora do print */
     .pdf-rotina-linha { display: none; }
+    /* Botão Gerenciar Rotinas — admin only */
+    .btn-gerenciar {
+      background: rgba(139,92,246,0.15); color: #a78bfa;
+      border: 1px solid rgba(139,92,246,0.3);
+      padding: 5px 12px; border-radius: 6px; cursor: pointer;
+      font-size: 0.82rem; font-weight: 600; transition: background 0.2s;
+    }
+    .btn-gerenciar:hover { background: rgba(139,92,246,0.28); }
     /* Chamado exibido apos encerrar */
     .chamado-encerrado {
       font-size: 0.82rem; font-weight: 600; color: #1a7f37;
@@ -68,6 +76,7 @@
     <span class="user-badge" id="userBadge"></span>
     <button class="btn-exportar" onclick="exportarPDF()" title="Exportar PDF">🖨️ Exportar PDF</button>
     <button class="btn-sincronizar" id="btnSincronizar" onclick="sincronizarDados()" title="Sincronizar dados locais para o servidor" style="display:none">☁️ Sincronizar</button>
+    <button class="btn-gerenciar" id="btnGerenciar" onclick="window.location.href='gerenciar-rotinas.html'" title="Gerenciar rotinas" style="display:none">⚙️ Rotinas</button>
     <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
 </header>
@@ -153,6 +162,9 @@ function verificarBtnSincronizar() {
     .some(k => k && (k.startsWith('status_') || k.startsWith('corvu_')));
   const btn = document.getElementById('btnSincronizar');
   if (btn) btn.style.display = temDados ? 'inline-block' : 'none';
+  // Botão de gerenciar rotinas sempre visível para admin
+  const btnG = document.getElementById('btnGerenciar');
+  if (btnG) btnG.style.display = 'inline-block';
 }
 
 // Cabeçalho de autenticação para todas as chamadas de API
@@ -192,7 +204,7 @@ function getDiasAnterioresComPendentes() {
 
   // IDs das rotinas de madrugada (seções que pertencem ao dia anterior)
   const idsMadrugada = new Set(
-    ROTINAS_DIARIA
+    _rotinasDiaria
       .filter(r => SECOES_DIA_ANTERIOR.has(r.secao))
       .map(r => r.id)
   );
@@ -224,7 +236,7 @@ function getDiasAnterioresComPendentes() {
 // Corvu diário agora salva por data para suportar dia anterior
 function getCorvuDadosDia(diaKey) {
   const k = 'corvu_dados_corvu_' + (diaKey || diaAtual);
-  try { return JSON.parse(lerChave(k) || '{}'); } catch { return {}; }
+  return _parseCorvuDados(lerChave(k));
 }
 async function saveCorvuCampoDia(diaKey, idx, campo, val) {
   const k = 'corvu_dados_corvu_' + (diaKey || diaAtual);
@@ -233,9 +245,22 @@ async function saveCorvuCampoDia(diaKey, idx, campo, val) {
   const d = getCorvuDadosDia(diaKey);
   if (!d[idx]) d[idx] = {};
   d[idx][campo] = val;
-  // Atualiza o cache local antes mesmo de salvar no servidor
+  // Atualiza o cache local ANTES de enviar — evita sobrescrita pelo polling
   _cache[k] = JSON.stringify(d);
-  await salvarChave(k, JSON.stringify(d));
+  // Coloca na fila antes do fetch — garante reenvio se falhar
+  _filaSalvamento[k] = JSON.stringify(d);
+  atualizarIndicadorPendentes();
+  try {
+    const r = await fetch(API_SALVAR, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ chave: k, valor: JSON.stringify(d) })
+    });
+    if (r.ok) {
+      delete _filaSalvamento[k];
+      _localTimestamp[k] = Date.now();
+    }
+  } catch { /* ficará na fila e será reenviado pelo flushPendentes */ }
   atualizarIndicadorPendentes();
 }
 
@@ -301,8 +326,7 @@ function renderAll() {
   if (a.startsWith('tab-diario-')) {
     const dk = a.replace('tab-diario-', '');
     garantirTabDinamica(dk);
-    // Passa só o sufixo para renderRotinas não duplicar o prefixo 'tab-'
-    renderRotinas('diario-' + dk, ROTINAS_DIARIA, 'diario', dk);
+    renderRotinas('diario-' + dk, _rotinasDiaria, 'diario', dk);
     return;
   }
   if (a.startsWith('tab-corvu-')) {
@@ -310,18 +334,17 @@ function renderAll() {
     garantirTabDinamica(dk);
     const tab = document.getElementById(a);
     if (tab) {
-      const [,am,ad] = dk.split('-');
       tab.innerHTML = `<div class="movimento-header">${getMovimentoHeaderCorvu(dk)}</div><div id="corvu-inner-${dk}"></div>`;
-      renderCorvuDia('corvu-inner-' + dk, ROTINAS_CORVU, dk);
+      renderCorvuDia('corvu-inner-' + dk, _rotinasCorvu, dk);
     }
     return;
   }
 
-  if(a==='diario')      renderRotinas('diario',      ROTINAS_DIARIA,       'diario',      diaAtual);
-  if(a==='corvudiario') renderCorvu('corvudiario',   ROTINAS_CORVU,        'corvu');
-  if(a==='fds')         renderRotinas('fds',         ROTINAS_FDS_NOVO,     'fds',         diaAtual);
-  if(a==='mensal')      renderRotinas('mensal',      ROTINAS_MENSAL,       'mensal',      null);
-  if(a==='corvumensal') renderCorvu('corvumensal',   ROTINAS_CORVU_MENSAL, 'corvumensal');
+  if(a==='diario')      renderRotinas('diario',      _rotinasDiaria,       'diario',      diaAtual);
+  if(a==='corvudiario') renderCorvu('corvudiario',   _rotinasCorvu,        'corvu');
+  if(a==='fds')         renderRotinas('fds',         _rotinasFds,          'fds',         diaAtual);
+  if(a==='mensal')      renderRotinas('mensal',      _rotinasMensal,       'mensal',      null);
+  if(a==='corvumensal') renderCorvu('corvumensal',   _rotinasCrvMensal,    'corvumensal');
   if(a==='anual')       renderRotinas('anual',       ROTINAS_ANUAIS,       'anual',       null);
 }
 
@@ -390,13 +413,31 @@ function getMovimentoHeaderCorvu(diaKey) {
   const [y,m,d] = (diaKey || diaAtual).split('-');
   return `ROTINAS DO CORVU - MOVIMENTO DO DIA – ${d}/${m}/${y}`;
 }
-function getMovimentoHeaderCorvuMensal(diaKey) {
-  const [y,m,d] = (diaKey || diaAtual).split('-');
-  return `CORVU – MENSAL – ${d}/${m}/${y}`;
+// Retorna YYYY-MM do mês de referência do mensal.
+// Regra: dias 1–15 → mês anterior (o mensal ainda está em andamento)
+//        dias 16–fim → mês atual (novo ciclo mensal ainda não começou)
+function getMesReferencia() {
+  const hoje = new Date();
+  const dia = hoje.getDate();
+  if (dia <= 15) {
+    // mês anterior
+    const ref = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+    const y = ref.getFullYear();
+    const m = String(ref.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  } else {
+    const y = hoje.getFullYear();
+    const m = String(hoje.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  }
 }
-function getMovimentoHeaderMensal(diaKey) {
-  const [y,m,d] = (diaKey || diaAtual).split('-');
-  return `UNIFACE MENSAL – ${d}/${m}/${y}`;
+function getMovimentoHeaderCorvuMensal() {
+  const [y, m] = getMesReferencia().split('-');
+  return `CORVU – MENSAL – ${m}/${y}`;
+}
+function getMovimentoHeaderMensal() {
+  const [y, m] = getMesReferencia().split('-');
+  return `UNIFACE MENSAL – ${m}/${y}`;
 }
 function getMovimentoHeaderAnual(diaKey) {
   const [y,m,d] = (diaKey || diaAtual).split('-');
@@ -505,7 +546,7 @@ function atualizarIndicadorPendentes() {
 }
 
 // Polling: atualiza dados do servidor a cada 3 segundos (quando em modo web)
-const PROTEGER_POR_MS = 60000; // ignora updates do servidor por 60s após edição local
+const PROTEGER_POR_MS = 300000; // ignora updates do servidor por 5min após edição local
 function iniciarPolling() {
   if (!USAR_API) return;
   setInterval(async () => {
@@ -527,9 +568,21 @@ function iniciarPolling() {
           const vStr = typeof v === 'string' ? v : JSON.stringify(v);
           // Não sobrescreve se:
           // 1) dado ainda está na fila de envio, OU
-          // 2) foi editado localmente há menos de 15 segundos
+          // 2) foi editado localmente há menos de PROTEGER_POR_MS
           const editadoRecente = _localTimestamp[k] && (agora - _localTimestamp[k]) < PROTEGER_POR_MS;
           if (!_filaSalvamento[k] && !editadoRecente && _cache[k] !== vStr) {
+            // Proteção extra para chaves Corvu: nunca sobrescreve com dado vazio
+            // se o cache local já tem dados
+            if (k.startsWith('corvu_dados_')) {
+              try {
+                const localObj = JSON.parse(_cache[k] || '{}');
+                const servidorObj = JSON.parse(vStr || '{}');
+                const localTemDados = Object.keys(localObj).length > 0;
+                const servidorTemDados = Object.keys(servidorObj).length > 0;
+                // Se local tem dados e servidor veio vazio, ignora
+                if (localTemDados && !servidorTemDados) return;
+              } catch {}
+            }
             _cache[k] = vStr;
             mudou = true;
           }
@@ -553,18 +606,50 @@ function atualizarSemPerderFoco() {
 }
 
 // ── Funções de storage que usam a camada unificada ────────────────────
-function getStatusKey(p,dk) { return(p==='diario'||p==='fds')?'status_diaria_'+(dk||diaAtual):'status_'+p; }
+function getStatusKey(p,dk) {
+  if (p==='diario'||p==='fds') return 'status_diaria_'+(dk||diaAtual);
+  if (p==='mensal') return 'status_mensal_'+getMesReferencia();
+  return 'status_'+p;
+}
 function getStatus(p,dk)    { try{return JSON.parse(lerChave(getStatusKey(p,dk))||'{}')}catch{return{}} }
 async function saveStatus(p,obj,dk){ const k=getStatusKey(p,dk); await salvarChave(k,JSON.stringify(obj)); _cache[k]=JSON.stringify(obj); atualizarIndicadorPendentes(); }
-function getBlocked(p,dk)   { const k=(p==='diario'||p==='fds')?'blocked_diaria_'+(dk||diaAtual):'blocked_'+p; try{return JSON.parse(lerChave(k)||'[]')}catch{return[]} }
-async function saveBlocked(p,arr,dk){ const k=(p==='diario'||p==='fds')?'blocked_diaria_'+(dk||diaAtual):'blocked_'+p; await salvarChave(k,JSON.stringify(arr)); _cache[k]=JSON.stringify(arr); atualizarIndicadorPendentes(); }
+function getBlocked(p,dk)   {
+  let k;
+  if (p==='diario'||p==='fds') k='blocked_diaria_'+(dk||diaAtual);
+  else if (p==='mensal') k='blocked_mensal_'+getMesReferencia();
+  else k='blocked_'+p;
+  try{return JSON.parse(lerChave(k)||'[]')}catch{return[]}
+}
+async function saveBlocked(p,arr,dk){
+  let k;
+  if (p==='diario'||p==='fds') k='blocked_diaria_'+(dk||diaAtual);
+  else if (p==='mensal') k='blocked_mensal_'+getMesReferencia();
+  else k='blocked_'+p;
+  await salvarChave(k,JSON.stringify(arr)); _cache[k]=JSON.stringify(arr); atualizarIndicadorPendentes();
+}
 function getCorvuDados(p) {
   // Para o corvu diário, usa chave datada para suportar dia anterior
   if (p === 'corvu') {
     const k = 'corvu_dados_corvu_' + diaAtual;
-    try { return JSON.parse(lerChave(k) || '{}'); } catch { return {}; }
+    return _parseCorvuDados(lerChave(k));
   }
-  try { return JSON.parse(lerChave('corvu_dados_'+p) || '{}'); } catch { return {}; }
+  // Para o corvu mensal, usa chave baseada no mês de referência
+  if (p === 'corvumensal') {
+    const k = 'corvu_dados_corvumensal_' + getMesReferencia();
+    return _parseCorvuDados(lerChave(k));
+  }
+  return _parseCorvuDados(lerChave('corvu_dados_'+p));
+}
+
+// Parse robusto: aceita string JSON, objeto já parseado, ou duplo-serializado
+function _parseCorvuDados(raw) {
+  if (!raw) return {};
+  try {
+    const v = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    // Duplo serializado: se ainda for string, parseia de novo
+    if (typeof v === 'string') return JSON.parse(v);
+    return v || {};
+  } catch { return {}; }
 }
 // Marca timestamp local de uma chave para proteger do polling por 15s
 // Chamado no oninput dos campos Corvu para proteger antes do blur/save
@@ -574,18 +659,43 @@ function marcarEdicaoLocal(chave) {
 
 async function saveCorvuCampo(p, idx, campo, val) {
   // Para o corvu diário, salva com chave datada
-  const chave = p === 'corvu' ? 'corvu_dados_corvu_' + diaAtual : 'corvu_dados_' + p;
-  // Protege imediatamente contra o polling sobrescrever
+  // Para o corvu mensal, salva com chave baseada no mês de referência
+  const chave = p === 'corvu'
+    ? 'corvu_dados_corvu_' + diaAtual
+    : p === 'corvumensal'
+      ? 'corvu_dados_corvumensal_' + getMesReferencia()
+      : 'corvu_dados_' + p;
+  // Protege imediatamente e por 5 minutos após o save
   _localTimestamp[chave] = Date.now();
   const d = getCorvuDados(p);
   if (!d[idx]) d[idx] = {};
   d[idx][campo] = val;
-  // Atualiza o cache local antes mesmo de salvar no servidor
+  // Atualiza o cache local ANTES de enviar ao servidor — evita sobrescrita pelo polling
   _cache[chave] = JSON.stringify(d);
-  await salvarChave(chave, JSON.stringify(d));
+  // Coloca na fila de salvamento antes do fetch — garante reenvio se falhar
+  _filaSalvamento[chave] = JSON.stringify(d);
+  atualizarIndicadorPendentes();
+  try {
+    const r = await fetch(API_SALVAR, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ chave, valor: JSON.stringify(d) })
+    });
+    if (r.ok) {
+      delete _filaSalvamento[chave];
+      // Renova proteção após save confirmado
+      _localTimestamp[chave] = Date.now();
+    }
+  } catch { /* ficará na fila e será reenviado pelo flushPendentes */ }
   atualizarIndicadorPendentes();
 }
-function getCorvuBlocked(p) { try{return JSON.parse(lerChave('blocked_corvu_'+p)||'[]')}catch{return[]} }
+function getCorvuBlocked(p) {
+  // Para o corvu mensal, usa chave baseada no mês de referência
+  if (p === 'corvumensal') {
+    try { return JSON.parse(lerChave('blocked_corvu_corvumensal_' + getMesReferencia()) || '[]'); } catch { return []; }
+  }
+  try{return JSON.parse(lerChave('blocked_corvu_'+p)||'[]')}catch{return[]}
+}
 
 // ── PERMISSÕES POR PERFIL ─────────────────────────────────────────────
 // admin  → pode editar tudo (rotinas + horários)
@@ -594,7 +704,10 @@ function getCorvuBlocked(p) { try{return JSON.parse(lerChave('blocked_corvu_'+p)
 // ── AÇÕES ─────────────────────────────────────────────────────────────
 async function mudarStatus(p,id,val,dk) {
   const s=getStatus(p,dk); if(!s[id])s[id]={};
-  s[id].status=val; if(val!=='erro')s[id].msg='';
+  s[id].status=val;
+  // Limpa a descrição do erro ao sair, mas PRESERVA o chamado e a obs em qualquer status
+  if(val!=='erro') s[id].msg='';
+  // chamado e obs nunca são apagados ao mudar de status
   await saveStatus(p,s,dk); renderAll();
 }
 async function mudarCampo(p,id,campo,val,dk) {
@@ -650,8 +763,11 @@ async function toggleBlock(p,id,dk) {
 }
 async function toggleCorvuBlock(p,idx) {
   let b=getCorvuBlocked(p); b=b.includes(idx)?b.filter(x=>x!==idx):[...b,idx];
-  await salvarChave('blocked_corvu_'+p,JSON.stringify(b));
-  _cache['blocked_corvu_'+p]=JSON.stringify(b);
+  const chaveB = p === 'corvumensal'
+    ? 'blocked_corvu_corvumensal_' + getMesReferencia()
+    : 'blocked_corvu_' + p;
+  await salvarChave(chaveB, JSON.stringify(b));
+  _cache[chaveB] = JSON.stringify(b);
   atualizarIndicadorPendentes();
   renderAll();
 }
@@ -691,8 +807,7 @@ function buildRotinaHtml(r,p,dk,blocked,status,agora,temHora,badge) {
       ${r.obs?`<div class="rotina-obs">${r.obs}</div>`:''}
       ${r.caminho?`<div class="rotina-caminho">📂 ${r.caminho}</div>`:''}
       ${st==='erro'&&info.msg?`<div class="erro-msg-view">⚠️ ${info.msg}</div>`:''}
-      ${st==='erro'&&info.chamado?`<div class="erro-msg-view" style="color:#ffb74d;">📋 Chamado: ${info.chamado}</div>`:''}
-      ${st==='encerrado'&&info.chamado?`<div style="color:#1a7f37;font-size:0.82rem;font-weight:600;">📋 Chamado: ${info.chamado}</div>`:''}
+      ${info.chamado&&st!=='erro'?`<div class="erro-msg-view" style="color:#ffb74d;">📋 Chamado: ${info.chamado}</div>`:''}
     </div>
     <div class="rotina-actions">
       <div class="rotina-actions-row">
@@ -735,6 +850,12 @@ function buildRotinaHtml(r,p,dk,blocked,status,agora,temHora,badge) {
   // Mostra o chamado mesmo apos encerrar (somente leitura, se houver chamado salvo)
   if(st==='encerrado' && info.chamado) html+=`
     <div class="chamado-encerrado">📋 Chamado: <strong>${info.chamado}</strong></div>`;
+
+  // Se a rotina continuou após erro (executando) e já tem chamado/obs — mostra em modo leitura
+  if(st==='executando' && info.chamado) html+=`
+    <div class="chamado-encerrado" style="color:#ffb74d;background:rgba(255,183,77,0.1);">📋 Chamado aberto: <strong>${info.chamado}</strong>
+      ${info.msg ? `<span style="color:#8b949e;font-weight:400;"> — ${info.msg}</span>` : ''}
+    </div>`;
 
   html+=`</div></div>`;
   return html;
@@ -839,9 +960,9 @@ function renderCorvu(tabId,lista,p) {
       ${isMenual?`<td class="corvu-obs-cell">${obs}</td>`:''}
       <td><input type="time" class="corvu-input" value="${d.inicio||''}" ${isB?'disabled':''} onblur="saveCorvuCampo('${p}',${idx},'inicio',this.value)" onkeydown="autoHoraTabCorvu(event,this,'${p}',${idx},'inicio')"></td>
       <td><input type="time" class="corvu-input" value="${d.fim||''}" ${isB?'disabled':''} onblur="saveCorvuCampo('${p}',${idx},'fim',this.value)" onkeydown="autoHoraTabCorvu(event,this,'${p}',${idx},'fim')"></td>
-      <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_${p==='corvu'?'corvu_'+diaAtual:p}')" onblur="saveCorvuCampo('${p}',${idx},'servidor',this.value)"></td>
-      <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_${p==='corvu'?'corvu_'+diaAtual:p}')" onblur="saveCorvuCampo('${p}',${idx},'usuario',this.value)"></td>
-      <td><input type="text" class="corvu-input upper" placeholder="Terminal" value="${d.terminal||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_${p==='corvu'?'corvu_'+diaAtual:p}')" onblur="saveCorvuCampo('${p}',${idx},'terminal',this.value)"></td>
+      <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_${p==='corvu'?'corvu_'+diaAtual:p==='corvumensal'?'corvumensal_'+getMesReferencia():p}')" onblur="saveCorvuCampo('${p}',${idx},'servidor',this.value)"></td>
+      <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_${p==='corvu'?'corvu_'+diaAtual:p==='corvumensal'?'corvumensal_'+getMesReferencia():p}')" onblur="saveCorvuCampo('${p}',${idx},'usuario',this.value)"></td>
+      <td><input type="text" class="corvu-input upper" placeholder="Terminal" value="${d.terminal||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_${p==='corvu'?'corvu_'+diaAtual:p==='corvumensal'?'corvumensal_'+getMesReferencia():p}')" onblur="saveCorvuCampo('${p}',${idx},'terminal',this.value)"></td>
       ${comBloqueio?`<td><button class="btn-block ${isB?'unblock':''}" onclick="toggleCorvuBlock('${p}',${idx})">${isB?'🔓':'🔒'}</button></td>`:''}
     </tr>`;
   });
@@ -857,7 +978,7 @@ function renderCorvuDia(containerId, lista, diaKey) {
   const chaveBlocked = 'blocked_corvu_dia_' + diaKey;
   let dados = {};
   let blocked = [];
-  try { dados = JSON.parse(lerChave(chaveCorvu) || '{}'); } catch {}
+  dados = _parseCorvuDados(lerChave(chaveCorvu));
   try { blocked = JSON.parse(lerChave(chaveBlocked) || '[]'); } catch {}
 
   let html = `<div style="overflow-x:auto;"><table class="corvu-table"><thead><tr>
@@ -902,7 +1023,46 @@ function atualizarRelogio() {
 function verificarMudancaDia() { const n=getDiaKey(); if(n!==diaAtual){diaAtual=n;renderAll();} }
 
 // ── INIT ──────────────────────────────────────────────────────────────
-carregarDadosServidor().then(() => { renderTabBar(); renderAll(); verificarBtnSincronizar(); });
+// Cópias trabalháveis dos arrays base — serão modificadas pelo merge de customizações
+let _rotinasDiaria    = [...ROTINAS_DIARIA];
+let _rotinasFds       = [...ROTINAS_FDS_NOVO];
+let _rotinasMensal    = [...ROTINAS_MENSAL];
+let _rotinasCorvu     = [...ROTINAS_CORVU];
+let _rotinasCrvMensal = [...ROTINAS_CORVU_MENSAL];
+
+// Carrega customizações da API e faz merge sobre os arrays base
+async function carregarRotinasCustum() {
+  try {
+    const r = await fetch('/api/rotinas', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!r.ok) return;
+    const custom = await r.json();
+
+    // Itens removidos: IDs/nomes marcados para exclusão
+    const removidosDiaria    = new Set(custom.removidos_diaria    || []);
+    const removidosFds       = new Set(custom.removidos_fds       || []);
+    const removidosMensal    = new Set(custom.removidos_mensal    || []);
+    const removidosCorvu     = new Set(custom.removidos_corvu     || []);
+    const removidosCrvMensal = new Set(custom.removidos_crvmensal || []);
+
+    // Aplica remoções sobre os arrays base
+    _rotinasDiaria    = ROTINAS_DIARIA   .filter(r => !removidosDiaria   .has(r.id));
+    _rotinasFds       = ROTINAS_FDS_NOVO .filter(r => !removidosFds      .has(r.id));
+    _rotinasMensal    = ROTINAS_MENSAL   .filter(r => !removidosMensal   .has(r.id));
+    _rotinasCorvu     = ROTINAS_CORVU    .filter(n => !removidosCorvu    .has(n));
+    _rotinasCrvMensal = ROTINAS_CORVU_MENSAL.filter(r => !removidosCrvMensal.has(r.nome));
+
+    // Itens adicionados: append ao final de cada lista
+    if (custom.adicionados_diaria   ?.length) _rotinasDiaria    = [..._rotinasDiaria,    ...custom.adicionados_diaria];
+    if (custom.adicionados_fds      ?.length) _rotinasFds       = [..._rotinasFds,       ...custom.adicionados_fds];
+    if (custom.adicionados_mensal   ?.length) _rotinasMensal    = [..._rotinasMensal,    ...custom.adicionados_mensal];
+    if (custom.adicionados_corvu    ?.length) _rotinasCorvu     = [..._rotinasCorvu,     ...custom.adicionados_corvu];
+    if (custom.adicionados_crvmensal?.length) _rotinasCrvMensal = [..._rotinasCrvMensal, ...custom.adicionados_crvmensal];
+  } catch { /* se falhar, usa os arrays base sem alteração */ }
+}
+
+carregarDadosServidor()
+  .then(() => carregarRotinasCustum())
+  .then(() => { renderTabBar(); renderAll(); verificarBtnSincronizar(); });
 atualizarRelogio();
 iniciarPolling();
 setInterval(atualizarRelogio,1000);

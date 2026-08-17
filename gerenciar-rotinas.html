@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerenciar Rotinas – Operações Coamo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
+
+    header {
+      background: #161b22; border-bottom: 1px solid #30363d;
+      padding: 12px 24px; display: flex; align-items: center; justify-content: space-between;
+    }
+    header h1 { font-size: 1.1rem; color: #58a6ff; }
+    .header-right { display: flex; gap: 10px; align-items: center; }
+    .btn { padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: opacity 0.2s; }
+    .btn:hover { opacity: 0.85; }
+    .btn-voltar  { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; }
+    .btn-salvar  { background: #1f6feb; color: #fff; }
+    .btn-salvar:disabled { opacity: 0.5; cursor: default; }
+    .btn-add     { background: #238636; color: #fff; font-size: 0.8rem; padding: 5px 10px; }
+    .btn-remove  { background: transparent; color: #f85149; border: 1px solid #f85149;
+                   border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; }
+    .btn-remove:hover { background: rgba(248,81,73,0.15); }
+
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+    .aviso-topo {
+      background: #161b22; border: 1px solid #f0c040; border-radius: 8px;
+      padding: 12px 16px; margin-bottom: 20px; color: #f0c040; font-size: 0.85rem;
+    }
+
+    .lista-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .lista-tab {
+      padding: 7px 16px; border-radius: 6px; border: 1px solid #30363d;
+      background: #21262d; color: #8b949e; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+    }
+    .lista-tab.ativa { background: #1f6feb; color: #fff; border-color: #1f6feb; }
+
+    .painel { display: none; }
+    .painel.ativo { display: block; }
+
+    .painel h2 { font-size: 1rem; color: #58a6ff; margin-bottom: 16px; }
+
+    /* Formulário de adição */
+    .form-adicionar {
+      background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+      padding: 16px; margin-bottom: 20px;
+    }
+    .form-adicionar h3 { font-size: 0.9rem; color: #3fb950; margin-bottom: 14px; }
+    .form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    .form-row label { font-size: 0.78rem; color: #8b949e; display: block; margin-bottom: 3px; }
+    .form-row input, .form-row select {
+      background: #0d1117; border: 1px solid #30363d; border-radius: 5px;
+      color: #c9d1d9; padding: 6px 10px; font-size: 0.85rem; width: 100%;
+    }
+    .form-row input:focus, .form-row select:focus { outline: none; border-color: #58a6ff; }
+    .field { flex: 1; min-width: 160px; }
+    .field-lg { flex: 2; min-width: 240px; }
+    .field-sm { flex: 0 0 110px; }
+
+    /* Lista de rotinas existentes */
+    .secao-grupo { margin-bottom: 18px; }
+    .secao-titulo {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: #58a6ff; margin-bottom: 8px;
+      padding-bottom: 4px; border-bottom: 1px solid #21262d;
+    }
+    .rotina-linha {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 10px; border-radius: 5px; margin-bottom: 4px;
+      background: #161b22; border: 1px solid #21262d; gap: 12px;
+    }
+    .rotina-linha.removida { opacity: 0.4; border-color: #f85149; background: rgba(248,81,73,0.05); }
+    .rotina-linha.adicionada { border-color: #3fb950; background: rgba(63,185,80,0.05); }
+    .rotina-info { flex: 1; min-width: 0; }
+    .rotina-nome { font-size: 0.85rem; color: #c9d1d9; font-weight: 600; }
+    .rotina-detalhe { font-size: 0.75rem; color: #8b949e; margin-top: 2px; }
+    .badge-hora { font-size: 0.72rem; background: #21262d; color: #8b949e;
+                  border-radius: 4px; padding: 1px 6px; margin-right: 6px; }
+    .badge-secao { font-size: 0.72rem; background: #1c2841; color: #58a6ff;
+                   border-radius: 4px; padding: 1px 6px; }
+    .badge-nova  { font-size: 0.72rem; background: #1a3d26; color: #3fb950;
+                   border-radius: 4px; padding: 1px 6px; }
+    .badge-removida { font-size: 0.72rem; background: #3d1a1a; color: #f85149;
+                      border-radius: 4px; padding: 1px 6px; }
+
+    .status-msg {
+      padding: 10px 14px; border-radius: 6px; font-size: 0.85rem;
+      font-weight: 600; margin-bottom: 16px; display: none;
+    }
+    .status-msg.ok  { background: rgba(63,185,80,0.15); color: #3fb950; border: 1px solid rgba(63,185,80,0.3); }
+    .status-msg.err { background: rgba(248,81,73,0.15); color: #f85149; border: 1px solid rgba(248,81,73,0.3); }
+
+    .rodape-fixo {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #161b22; border-top: 1px solid #30363d;
+      padding: 12px 24px; display: flex; justify-content: flex-end; gap: 10px; align-items: center;
+    }
+    .rodape-fixo span { font-size: 0.82rem; color: #8b949e; }
+    .contador-alteracoes { font-weight: 700; color: #f0c040; }
+
+    /* Corvu — campos específicos */
+    .corvu-obs-field { width: 100%; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚙️ Gerenciar Rotinas</h1>
+  <div class="header-right">
+    <span id="userBadge" style="font-size:0.82rem;color:#8b949e;"></span>
+    <button class="btn btn-voltar" onclick="window.location.href='dashboard.html'">← Voltar</button>
+  </div>
+</header>
+
+<main>
+  <div class="aviso-topo">
+    ⚠️ Alterações aqui afetam <strong>todos os usuários</strong> imediatamente. Rotinas adicionadas aparecem no final de cada seção. Rotinas removidas ficam ocultas mas seus dados históricos são preservados.
+  </div>
+
+  <div id="statusMsg" class="status-msg"></div>
+
+  <!-- Abas de seleção de lista -->
+  <div class="lista-tabs">
+    <button class="lista-tab ativa" onclick="mudarAba('diaria')">📋 Diária</button>
+    <button class="lista-tab" onclick="mudarAba('corvu')">🖥️ Corvu Diário</button>
+    <button class="lista-tab" onclick="mudarAba('fds')">📆 Final de Semana</button>
+    <button class="lista-tab" onclick="mudarAba('mensal')">📅 Mensal</button>
+    <button class="lista-tab" onclick="mudarAba('crvmensal')">🖥️ Corvu Mensal</button>
+  </div>
+
+  <!-- ══ PAINEL: DIÁRIA ══════════════════════════════════════════════ -->
+  <div id="painel-diaria" class="painel ativo">
+    <h2>Rotinas Diárias</h2>
+    <div class="form-adicionar">
+      <h3>➕ Adicionar nova rotina diária</h3>
+      <div class="form-row">
+        <div class="field-sm">
+          <label>Hora (HH:MM)</label>
+          <input type="text" id="d-hora" placeholder="19:00" maxlength="5">
+        </div>
+        <div class="field-lg">
+          <label>Texto / Nome da rotina *</label>
+          <input type="text" id="d-texto" placeholder="Ex: Job Diário – Nova Rotina">
+        </div>
+        <div class="field">
+          <label>Observação / Área</label>
+          <input type="text" id="d-obs" placeholder="Ex: Financeiro">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field-lg">
+          <label>Caminho no sistema</label>
+          <input type="text" id="d-caminho" placeholder="Ex: Serviço Batch/Financeiro/Job Diário">
+        </div>
+        <div class="field">
+          <label>Seção</label>
+          <select id="d-secao">
+            <option>Início do dia</option>
+            <option>Madrugada</option>
+            <option>Manhã</option>
+            <option>Meio-dia</option>
+            <option>Tarde</option>
+            <option selected>Noite</option>
+            <option>Após meia-noite</option>
+            <option>Após 03:00h</option>
+            <option>Acompanhamento BI</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-add" onclick="adicionarRotina('diaria')">➕ Adicionar</button>
+    </div>
+    <div id="lista-diaria"></div>
+  </div>
+
+  <!-- ══ PAINEL: CORVU DIÁRIO ════════════════════════════════════════ -->
+  <div id="painel-corvu" class="painel">
+    <h2>Corvu Diário</h2>
+    <div class="form-adicionar">
+      <h3>➕ Adicionar nova linha Corvu Diário</h3>
+      <div class="form-row">
+        <div class="field-lg">
+          <label>Nome da rotina Corvu *</label>
+          <input type="text" id="c-nome" placeholder="Ex: Nova Rotina – MSS">
+        </div>
+      </div>
+      <button class="btn btn-add" onclick="adicionarRotina('corvu')">➕ Adicionar</button>
+    </div>
+    <div id="lista-corvu"></div>
+  </div>
+
+  <!-- ══ PAINEL: FINAL DE SEMANA ════════════════════════════════════ -->
+  <div id="painel-fds" class="painel">
+    <h2>Rotinas Final de Semana</h2>
+    <div class="form-adicionar">
+      <h3>➕ Adicionar nova rotina de final de semana</h3>
+      <div class="form-row">
+        <div class="field-sm">
+          <label>Hora (HH:MM)</label>
+          <input type="text" id="f-hora" placeholder="19:00" maxlength="5">
+        </div>
+        <div class="field-lg">
+          <label>Texto / Nome da rotina *</label>
+          <input type="text" id="f-texto" placeholder="Ex: Job Cálculo Semanal">
+        </div>
+        <div class="field">
+          <label>Observação / Área</label>
+          <input type="text" id="f-obs" placeholder="Ex: Transporte">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field-lg">
+          <label>Caminho no sistema</label>
+          <input type="text" id="f-caminho" placeholder="Ex: Serviço Batch/Transporte/Job Semanal">
+        </div>
+        <div class="field">
+          <label>Seção</label>
+          <select id="f-secao">
+            <option selected>Sábado Noite</option>
+            <option>Sábado Virada</option>
+            <option>Corvu Sábado</option>
+            <option>Domingo Manhã</option>
+            <option>Corvu Domingo</option>
+            <option>Domingo Madrugada</option>
+            <option>Domingo Noite</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-add" onclick="adicionarRotina('fds')">➕ Adicionar</button>
+    </div>
+    <div id="lista-fds"></div>
+  </div>
+
+  <!-- ══ PAINEL: MENSAL ════════════════════════════════════════════ -->
+  <div id="painel-mensal" class="painel">
+    <h2>Rotinas Mensais</h2>
+    <div class="form-adicionar">
+      <h3>➕ Adicionar nova rotina mensal</h3>
+      <div class="form-row">
+        <div class="field-sm">
+          <label>Quando</label>
+          <input type="text" id="m-hora" placeholder="Ex: Após liberação">
+        </div>
+        <div class="field-lg">
+          <label>Texto / Nome da rotina *</label>
+          <input type="text" id="m-texto" placeholder="Ex: Job Mensal – Nova Rotina">
+        </div>
+        <div class="field">
+          <label>Observação / Área</label>
+          <input type="text" id="m-obs" placeholder="Ex: Financeiro">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field-lg">
+          <label>Caminho no sistema</label>
+          <input type="text" id="m-caminho" placeholder="Ex: Serviço Batch/Financeiro/Job Mensal">
+        </div>
+        <div class="field">
+          <label>Seção</label>
+          <select id="m-secao">
+            <option>Último dia do mês</option>
+            <option>Virada do mês</option>
+            <option>Primeiro dia do mês</option>
+            <option selected>Após liberação</option>
+            <option>Quando solicitado</option>
+            <option>Datas específicas</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-add" onclick="adicionarRotina('mensal')">➕ Adicionar</button>
+    </div>
+    <div id="lista-mensal"></div>
+  </div>
+
+  <!-- ══ PAINEL: CORVU MENSAL ══════════════════════════════════════ -->
+  <div id="painel-crvmensal" class="painel">
+    <h2>Corvu Mensal</h2>
+    <div class="form-adicionar">
+      <h3>➕ Adicionar nova linha Corvu Mensal</h3>
+      <div class="form-row">
+        <div class="field-lg">
+          <label>Nome da rotina Corvu *</label>
+          <input type="text" id="cm-nome" placeholder="Ex: Nova Rotina – MSS">
+        </div>
+        <div class="field-lg corvu-obs-field">
+          <label>Observação / condição de execução</label>
+          <input type="text" id="cm-obs" placeholder="Ex: Após Rotina Mensal X">
+        </div>
+      </div>
+      <button class="btn btn-add" onclick="adicionarRotina('crvmensal')">➕ Adicionar</button>
+    </div>
+    <div id="lista-crvmensal"></div>
+  </div>
+
+  <div style="height:60px"></div><!-- espaço para rodapé fixo -->
+</main>
+
+<div class="rodape-fixo">
+  <span><span class="contador-alteracoes" id="contAlteracoes">0</span> alteração(ões) pendente(s)</span>
+  <button class="btn btn-voltar" onclick="window.location.href='dashboard.html'">Cancelar</button>
+  <button class="btn btn-salvar" id="btnSalvar" onclick="salvarTudo()" disabled>💾 Salvar alterações</button>
+</div>
+
+<script src="data.js"></script>
+<script>
+// ── AUTH ─────────────────────────────────────────────────────────────
+const user  = sessionStorage.getItem('user');
+const role  = sessionStorage.getItem('role');
+const token = sessionStorage.getItem('token');
+if (!user || !token || role !== 'admin') {
+  sessionStorage.clear(); window.location.href = 'index.html';
+}
+document.getElementById('userBadge').textContent = '👤 ' + user;
+
+function authHeaders() {
+  return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+}
+
+// ── ESTADO ───────────────────────────────────────────────────────────
+// Customizações carregadas do servidor
+let custom = {
+  removidos_diaria: [], adicionados_diaria: [],
+  removidos_corvu: [],  adicionados_corvu: [],
+  removidos_fds: [],    adicionados_fds: [],
+  removidos_mensal: [], adicionados_mensal: [],
+  removidos_crvmensal: [], adicionados_crvmensal: []
+};
+
+let abaAtiva = 'diaria';
+
+// ── INIT ─────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const r = await fetch('/api/rotinas', { headers: authHeaders() });
+    if (r.ok) {
+      const data = await r.json();
+      // Merge seguro — preserva arrays vazios se não existirem no servidor
+      custom = {
+        removidos_diaria:    data.removidos_diaria    || [],
+        adicionados_diaria:  data.adicionados_diaria  || [],
+        removidos_corvu:     data.removidos_corvu     || [],
+        adicionados_corvu:   data.adicionados_corvu   || [],
+        removidos_fds:       data.removidos_fds       || [],
+        adicionados_fds:     data.adicionados_fds     || [],
+        removidos_mensal:    data.removidos_mensal    || [],
+        adicionados_mensal:  data.adicionados_mensal  || [],
+        removidos_crvmensal: data.removidos_crvmensal || [],
+        adicionados_crvmensal: data.adicionados_crvmensal || [],
+      };
+    }
+  } catch {}
+  renderTodas();
+}
+
+// ── ABAS ─────────────────────────────────────────────────────────────
+function mudarAba(aba) {
+  abaAtiva = aba;
+  document.querySelectorAll('.lista-tab').forEach((btn, i) => {
+    const abas = ['diaria','corvu','fds','mensal','crvmensal'];
+    btn.classList.toggle('ativa', abas[i] === aba);
+  });
+  document.querySelectorAll('.painel').forEach(p => p.classList.remove('ativo'));
+  document.getElementById('painel-' + aba).classList.add('ativo');
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────
+function renderTodas() {
+  renderDiaria();
+  renderCorvu();
+  renderFds();
+  renderMensal();
+  renderCrvmensal();
+  atualizarContador();
+}
+
+function renderDiaria() {
+  const removidos = new Set(custom.removidos_diaria);
+  const adicionados = custom.adicionados_diaria || [];
+
+  // Agrupa por seção
+  const grupos = {};
+  ROTINAS_DIARIA.forEach(r => {
+    const s = r.secao || 'Geral';
+    if (!grupos[s]) grupos[s] = [];
+    grupos[s].push({ ...r, _base: true });
+  });
+  adicionados.forEach(r => {
+    const s = r.secao || 'Noite';
+    if (!grupos[s]) grupos[s] = [];
+    grupos[s].push({ ...r, _base: false });
+  });
+
+  let html = '';
+  Object.entries(grupos).forEach(([sec, itens]) => {
+    html += `<div class="secao-grupo"><div class="secao-titulo">${sec}</div>`;
+    itens.forEach(r => {
+      const isRemovida = removidos.has(r.id);
+      const isNova = !r._base;
+      html += `<div class="rotina-linha${isRemovida ? ' removida' : ''}${isNova ? ' adicionada' : ''}">
+        <div class="rotina-info">
+          <div class="rotina-nome">
+            ${r.hora ? `<span class="badge-hora">${r.hora}</span>` : ''}
+            ${r.texto}
+            ${isNova ? '<span class="badge-nova">NOVA</span>' : ''}
+            ${isRemovida ? '<span class="badge-removida">REMOVIDA</span>' : ''}
+          </div>
+          ${r.obs ? `<div class="rotina-detalhe">${r.obs}</div>` : ''}
+        </div>
+        ${isRemovida
+          ? `<button class="btn-remove" onclick="restaurar('diaria','${escId(r.id)}')">↩ Restaurar</button>`
+          : isNova
+            ? `<button class="btn-remove" onclick="removerAdicionada('diaria','${escId(r.id)}')">🗑 Remover</button>`
+            : `<button class="btn-remove" onclick="remover('diaria','${escId(r.id)}')">🗑 Remover</button>`
+        }
+      </div>`;
+    });
+    html += '</div>';
+  });
+  document.getElementById('lista-diaria').innerHTML = html;
+}
+
+function renderCorvu() {
+  const removidos = new Set(custom.removidos_corvu);
+  const adicionados = custom.adicionados_corvu || [];
+  const todos = [...ROTINAS_CORVU.map(n => ({ nome: n, _base: true })),
+                 ...adicionados.map(n => ({ nome: n, _base: false }))];
+
+  let html = '<div class="secao-grupo">';
+  todos.forEach((item, idx) => {
+    const nome = item.nome;
+    const isRemovida = removidos.has(nome);
+    const isNova = !item._base;
+    html += `<div class="rotina-linha${isRemovida ? ' removida' : ''}${isNova ? ' adicionada' : ''}">
+      <div class="rotina-info">
+        <div class="rotina-nome">
+          ${nome}
+          ${isNova ? '<span class="badge-nova">NOVA</span>' : ''}
+          ${isRemovida ? '<span class="badge-removida">REMOVIDA</span>' : ''}
+        </div>
+      </div>
+      ${isRemovida
+        ? `<button class="btn-remove" onclick="restaurarCorvu('corvu','${escStr(nome)}')">↩ Restaurar</button>`
+        : isNova
+          ? `<button class="btn-remove" onclick="removerAdicionadaCorvu('corvu','${escStr(nome)}')">🗑 Remover</button>`
+          : `<button class="btn-remove" onclick="removerCorvu('corvu','${escStr(nome)}')">🗑 Remover</button>`
+      }
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('lista-corvu').innerHTML = html;
+}
+
+function renderFds() {
+  const removidos = new Set(custom.removidos_fds);
+  const adicionados = custom.adicionados_fds || [];
+
+  const grupos = {};
+  ROTINAS_FDS_NOVO.forEach(r => {
+    const s = r.secao || 'Geral';
+    if (!grupos[s]) grupos[s] = [];
+    grupos[s].push({ ...r, _base: true });
+  });
+  adicionados.forEach(r => {
+    const s = r.secao || 'Sábado Noite';
+    if (!grupos[s]) grupos[s] = [];
+    grupos[s].push({ ...r, _base: false });
+  });
+
+  let html = '';
+  Object.entries(grupos).forEach(([sec, itens]) => {
+    html += `<div class="secao-grupo"><div class="secao-titulo">${sec}</div>`;
+    itens.forEach(r => {
+      const isRemovida = removidos.has(r.id);
+      const isNova = !r._base;
+      html += `<div class="rotina-linha${isRemovida ? ' removida' : ''}${isNova ? ' adicionada' : ''}">
+        <div class="rotina-info">
+          <div class="rotina-nome">
+            ${r.hora && r.hora !== '—' ? `<span class="badge-hora">${r.hora}</span>` : ''}
+            ${r.texto}
+            ${isNova ? '<span class="badge-nova">NOVA</span>' : ''}
+            ${isRemovida ? '<span class="badge-removida">REMOVIDA</span>' : ''}
+          </div>
+          ${r.obs ? `<div class="rotina-detalhe">${r.obs}</div>` : ''}
+        </div>
+        ${isRemovida
+          ? `<button class="btn-remove" onclick="restaurar('fds','${escId(r.id)}')">↩ Restaurar</button>`
+          : isNova
+            ? `<button class="btn-remove" onclick="removerAdicionada('fds','${escId(r.id)}')">🗑 Remover</button>`
+            : `<button class="btn-remove" onclick="remover('fds','${escId(r.id)}')">🗑 Remover</button>`
+        }
+      </div>`;
+    });
+    html += '</div>';
+  });
+  document.getElementById('lista-fds').innerHTML = html;
+}
+
+function renderMensal() {
+  const removidos = new Set(custom.removidos_mensal);
+  const adicionados = custom.adicionados_mensal || [];
+
+  const grupos = {};
+  ROTINAS_MENSAL.forEach(r => {
+    const s = r.secao || 'Geral';
+    if (!grupos[s]) grupos[s] = [];
+    grupos[s].push({ ...r, _base: true });
+  });
+  adicionados.forEach(r => {
+    const s = r.secao || 'Após liberação';
+    if (!grupos[s]) grupos[s] = [];
+    grupos[s].push({ ...r, _base: false });
+  });
+
+  let html = '';
+  Object.entries(grupos).forEach(([sec, itens]) => {
+    html += `<div class="secao-grupo"><div class="secao-titulo">${sec}</div>`;
+    itens.forEach(r => {
+      const isRemovida = removidos.has(r.id);
+      const isNova = !r._base;
+      html += `<div class="rotina-linha${isRemovida ? ' removida' : ''}${isNova ? ' adicionada' : ''}">
+        <div class="rotina-info">
+          <div class="rotina-nome">
+            ${r.hora ? `<span class="badge-hora" style="font-size:0.7rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle;">${r.hora}</span>` : ''}
+            ${r.texto}
+            ${isNova ? '<span class="badge-nova">NOVA</span>' : ''}
+            ${isRemovida ? '<span class="badge-removida">REMOVIDA</span>' : ''}
+          </div>
+          ${r.obs ? `<div class="rotina-detalhe">${r.obs}</div>` : ''}
+        </div>
+        ${isRemovida
+          ? `<button class="btn-remove" onclick="restaurar('mensal','${escId(r.id)}')">↩ Restaurar</button>`
+          : isNova
+            ? `<button class="btn-remove" onclick="removerAdicionada('mensal','${escId(r.id)}')">🗑 Remover</button>`
+            : `<button class="btn-remove" onclick="remover('mensal','${escId(r.id)}')">🗑 Remover</button>`
+        }
+      </div>`;
+    });
+    html += '</div>';
+  });
+  document.getElementById('lista-mensal').innerHTML = html;
+}
+
+function renderCrvmensal() {
+  const removidos = new Set(custom.removidos_crvmensal);
+  const adicionados = custom.adicionados_crvmensal || [];
+  const todos = [...ROTINAS_CORVU_MENSAL.map(r => ({ ...r, _base: true })),
+                 ...adicionados.map(r => ({ ...r, _base: false }))];
+
+  let html = '<div class="secao-grupo">';
+  todos.forEach(item => {
+    const isRemovida = removidos.has(item.nome);
+    const isNova = !item._base;
+    html += `<div class="rotina-linha${isRemovida ? ' removida' : ''}${isNova ? ' adicionada' : ''}">
+      <div class="rotina-info">
+        <div class="rotina-nome">
+          ${item.nome}
+          ${isNova ? '<span class="badge-nova">NOVA</span>' : ''}
+          ${isRemovida ? '<span class="badge-removida">REMOVIDA</span>' : ''}
+        </div>
+        ${item.obs ? `<div class="rotina-detalhe">${item.obs}</div>` : ''}
+      </div>
+      ${isRemovida
+        ? `<button class="btn-remove" onclick="restaurarCorvu('crvmensal','${escStr(item.nome)}')">↩ Restaurar</button>`
+        : isNova
+          ? `<button class="btn-remove" onclick="removerAdicionadaCorvu('crvmensal','${escStr(item.nome)}')">🗑 Remover</button>`
+          : `<button class="btn-remove" onclick="removerCorvu('crvmensal','${escStr(item.nome)}')">🗑 Remover</button>`
+      }
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('lista-crvmensal').innerHTML = html;
+}
+
+// ── AÇÕES ─────────────────────────────────────────────────────────────
+function gerarId(prefixo) {
+  return prefixo + '_custom_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+}
+
+function adicionarRotina(tipo) {
+  let item;
+  if (tipo === 'diaria') {
+    const texto = document.getElementById('d-texto').value.trim();
+    if (!texto) return mostrarMsg('Preencha o nome da rotina.', 'err');
+    item = {
+      id: gerarId('d'),
+      hora: document.getElementById('d-hora').value.trim(),
+      texto,
+      obs:    document.getElementById('d-obs').value.trim(),
+      caminho: document.getElementById('d-caminho').value.trim(),
+      secao:  document.getElementById('d-secao').value,
+    };
+    custom.adicionados_diaria = [...(custom.adicionados_diaria || []), item];
+    // Limpa campos
+    ['d-hora','d-texto','d-obs','d-caminho'].forEach(id => document.getElementById(id).value = '');
+
+  } else if (tipo === 'corvu') {
+    const nome = document.getElementById('c-nome').value.trim();
+    if (!nome) return mostrarMsg('Preencha o nome da rotina Corvu.', 'err');
+    if ([...ROTINAS_CORVU, ...(custom.adicionados_corvu||[])].includes(nome))
+      return mostrarMsg('Essa rotina Corvu já existe.', 'err');
+    custom.adicionados_corvu = [...(custom.adicionados_corvu || []), nome];
+    document.getElementById('c-nome').value = '';
+
+  } else if (tipo === 'fds') {
+    const texto = document.getElementById('f-texto').value.trim();
+    if (!texto) return mostrarMsg('Preencha o nome da rotina.', 'err');
+    item = {
+      id: gerarId('fn'),
+      hora: document.getElementById('f-hora').value.trim(),
+      texto,
+      obs:    document.getElementById('f-obs').value.trim(),
+      caminho: document.getElementById('f-caminho').value.trim(),
+      secao:  document.getElementById('f-secao').value,
+    };
+    custom.adicionados_fds = [...(custom.adicionados_fds || []), item];
+    ['f-hora','f-texto','f-obs','f-caminho'].forEach(id => document.getElementById(id).value = '');
+
+  } else if (tipo === 'mensal') {
+    const texto = document.getElementById('m-texto').value.trim();
+    if (!texto) return mostrarMsg('Preencha o nome da rotina.', 'err');
+    item = {
+      id: gerarId('m'),
+      hora: document.getElementById('m-hora').value.trim(),
+      texto,
+      obs:    document.getElementById('m-obs').value.trim(),
+      caminho: document.getElementById('m-caminho').value.trim(),
+      secao:  document.getElementById('m-secao').value,
+    };
+    custom.adicionados_mensal = [...(custom.adicionados_mensal || []), item];
+    ['m-hora','m-texto','m-obs','m-caminho'].forEach(id => document.getElementById(id).value = '');
+
+  } else if (tipo === 'crvmensal') {
+    const nome = document.getElementById('cm-nome').value.trim();
+    if (!nome) return mostrarMsg('Preencha o nome da rotina.', 'err');
+    const obs = document.getElementById('cm-obs').value.trim();
+    custom.adicionados_crvmensal = [...(custom.adicionados_crvmensal || []), { nome, obs }];
+    document.getElementById('cm-nome').value = '';
+    document.getElementById('cm-obs').value = '';
+  }
+
+  renderTodas();
+}
+
+// Remove rotina base (marca para remoção pelo id)
+function remover(lista, id) {
+  const key = 'removidos_' + lista;
+  if (!custom[key].includes(id)) custom[key] = [...custom[key], id];
+  renderTodas();
+}
+// Restaura rotina base removida
+function restaurar(lista, id) {
+  const key = 'removidos_' + lista;
+  custom[key] = custom[key].filter(x => x !== id);
+  renderTodas();
+}
+// Remove rotina adicionada (pelo id)
+function removerAdicionada(lista, id) {
+  const key = 'adicionados_' + lista;
+  custom[key] = custom[key].filter(r => r.id !== id);
+  renderTodas();
+}
+
+// Corvu usa nome como identificador
+function removerCorvu(lista, nome) {
+  const key = 'removidos_' + lista;
+  if (!custom[key].includes(nome)) custom[key] = [...custom[key], nome];
+  renderTodas();
+}
+function restaurarCorvu(lista, nome) {
+  const key = 'removidos_' + lista;
+  custom[key] = custom[key].filter(x => x !== nome);
+  renderTodas();
+}
+function removerAdicionadaCorvu(lista, nome) {
+  const key = 'adicionados_' + lista;
+  custom[key] = custom[key].filter(r => r !== nome && r.nome !== nome);
+  renderTodas();
+}
+
+// ── CONTADOR ──────────────────────────────────────────────────────────
+function atualizarContador() {
+  const total =
+    (custom.removidos_diaria?.length || 0) +
+    (custom.adicionados_diaria?.length || 0) +
+    (custom.removidos_corvu?.length || 0) +
+    (custom.adicionados_corvu?.length || 0) +
+    (custom.removidos_fds?.length || 0) +
+    (custom.adicionados_fds?.length || 0) +
+    (custom.removidos_mensal?.length || 0) +
+    (custom.adicionados_mensal?.length || 0) +
+    (custom.removidos_crvmensal?.length || 0) +
+    (custom.adicionados_crvmensal?.length || 0);
+
+  document.getElementById('contAlteracoes').textContent = total;
+  document.getElementById('btnSalvar').disabled = false; // sempre habilitado para poder salvar estado limpo também
+}
+
+// ── SALVAR ────────────────────────────────────────────────────────────
+async function salvarTudo() {
+  const btn = document.getElementById('btnSalvar');
+  btn.disabled = true;
+  btn.textContent = '⏳ Salvando...';
+  try {
+    const r = await fetch('/api/rotinas', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(custom)
+    });
+    const data = await r.json();
+    if (r.ok) {
+      mostrarMsg('✅ Alterações salvas com sucesso! Serão aplicadas ao recarregar o dashboard.', 'ok');
+    } else {
+      mostrarMsg('Erro ao salvar: ' + (data.erro || 'falha'), 'err');
+    }
+  } catch {
+    mostrarMsg('Erro de conexão ao salvar.', 'err');
+  }
+  btn.disabled = false;
+  btn.textContent = '💾 Salvar alterações';
+}
+
+// ── UTILITÁRIOS ───────────────────────────────────────────────────────
+function mostrarMsg(msg, tipo) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = 'status-msg ' + tipo;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+// Escapa aspas simples para uso em atributos HTML onclick
+function escId(id) { return String(id).replace(/'/g, "\\'"); }
+function escStr(s) { return String(s).replace(/'/g, "\\'"); }
+
+// ── START ─────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

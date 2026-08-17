@@ -31,6 +31,7 @@ const ROTINAS_DIARIA = [
   { id:'d17b', hora:'11:00', texto:'Receber arq. Cartões CIELO e GETNET', obs:'Financeiro/Contas a Receber - Receber arquivos de Cartões 11:00h', caminho:'Serviço Batch/Financeiro/Contas a Receber/Receber arq. Cartões + Carga diária Aut. Extrato', campo:'Receber arq. Cartões CIELO e GETNET ___', semStatus:true, secao:'Meio-dia' },
   { id:'d25b', hora:'11:00', texto:'Carga Diária Automática de Extrato Eletrônico de Cartões', obs:'Financeiro - Receber arquivos de Cartões 11:00h', caminho:'Serviço Batch/Financeiro/Contas a Receber/Carga Diária Automática Extrato Eletrônico Cartões', secao:'Meio-dia' },
   { id:'d26', hora:'11:00', texto:'Rotina Diária Unif. de Vendas para Extrato Eletrônico de Cartões (S.B.\\Financeiro\\Contas a Receber)', obs:'Financeiro', caminho:'Serviço Batch/Financeiro/Contas a Receber/Rotina Diária Unif. de Vendas para Extrato Eletrônico de Cartões', secao:'Meio-dia' },
+  { id:'d26b', hora:'12:00', texto:'Diário – Processa StockReport Wamas', obs:'Industrial', caminho:'Serviço Batch/Industrial/Diário – Processa StockReport Wamas', secao:'Meio-dia' },
   { id:'d27a', hora:'12:00', texto:'Job-APSs Diário - Moinho', obs:'Industrial', caminho:'Serviço Batch/Industrial/Job-APSs Diário - Moinho', secao:'Meio-dia' },
   { id:'d27b', hora:'12:00', texto:'Job-APSs Diário - Ração', obs:'Industrial', caminho:'Serviço Batch/Industrial/Job-APSs Diário - Ração', secao:'Meio-dia' },
   { id:'d28', hora:'12:00', texto:'Rotina Diária do RH – meio-dia', obs:'RH', caminho:'Serviço Batch/Recursos Humanos/Rotina Diária do RH – meio-dia', secao:'Meio-dia' },
@@ -104,7 +105,6 @@ const ROTINAS_DIARIA = [
   { id:'d89', hora:'21:00', texto:'Contabilização Diária Arcam', obs:'Arcam', caminho:'Serviço Batch/Arcam/Contabilização Diária Arcam', secao:'Noite' },
   { id:'d90', hora:'21:00', texto:'Contabilização Contas a Receber', obs:'Financeiro', caminho:'Serviço Batch/Financeiro/Contabilização Contas a Receber', secao:'Noite' },
   { id:'d91', hora:'21:00', texto:'Rotina Batch Diária Sementes', obs:'Sementes', caminho:'Serviço Batch/Sementes/Rotina Batch Diária Sementes', secao:'Noite' },
-  { id:'d92', hora:'21:00', texto:'Job Diário - Geração de Arquivo para ECM', obs:'Fatpem', caminho:'Serviço Batch/Fatpem/Job Diário - Geração de Arquivo para ECM', secao:'Noite' },
   { id:'d93', hora:'21:00', texto:'Diário – Rotas Bloqueadas', obs:'Fatpem', caminho:'Serviço Batch/Fatpem/Diário – Rotas Bloqueadas', secao:'Noite' },
   { id:'d94', hora:'21:00', texto:'Rotina Diária Sipa', obs:'Cooperados/Rotinas Sipa - Após Rotina do Astec', caminho:'Serviço Batch/Cooperados/Rotinas Sipa/Rotina Diária Sipa', secao:'Noite' },
   { id:'d95', hora:'21:00', texto:'Rotina Diária Auxiliar - SIPA', obs:'Cooperados/Rotinas Sipa', caminho:'Serviço Batch/Cooperados/Rotinas Sipa/Rotina Diária Auxiliar - SIPA', secao:'Noite' },
@@ -154,6 +154,7 @@ const ROTINAS_DIARIA = [
   { id:'d131', hora:'00:01', texto:'Fatpem / Job Diário – Fatpem', obs:'', caminho:'Serviço Batch/Fatpem / Job Diário – Fatpem', secao:'Após meia-noite' },
   { id:'d132', hora:'00:01', texto:'Fatpem / Job Diário – Atualização Automática Limite de Crédito', obs:'Não executar como movto de sábado', caminho:'Serviço Batch/Fatpem / Job Diário – Atualização Automática Limite de Crédi', secao:'Após meia-noite' },
   { id:'d133', hora:'00:01', texto:'Fatpem / Job Diário – Gerar tabelas de preços para sim3g', obs:'', caminho:'Serviço Batch/Fatpem / Job Diário – Gerar tabelas de preços para sim3g', secao:'Após meia-noite' },
+  { id:'d133b', hora:'00:01', texto:'Diário – Processa StockReport Wamas', obs:'Industrial', caminho:'Serviço Batch/Industrial/Diário – Processa StockReport Wamas', secao:'Após meia-noite' },
   { id:'d134', hora:'00:01', texto:'Industrial / Diário – Variação Umidade Soja', obs:'', caminho:'Serviço Batch/Industrial / Diário – Variação Umidade Soja', secao:'Após meia-noite' },
   { id:'d135', hora:'00:01', texto:'Industrial / Diário – Demanda de produção Industrial', obs:'Após término exec corvu indústria aux', caminho:'Serviço Batch/Industrial / Diário – Demanda de produção Industrial', secao:'Após meia-noite' },
   { id:'d136', hora:'00:01', texto:'Industrial / Diário - Conciliação Estoque Comercial', obs:'', caminho:'Serviço Batch/Industrial / Diário - Conciliação Estoque Comercial', secao:'Após meia-noite' },
@@ -297,6 +298,7 @@ const ROTINAS_CORVU_MENSAL = [
   { nome: 'Credicoamo Mensal - MSS',                      obs: '' },
   { nome: 'Imobilizado - MSS',                            obs: '' },
   { nome: 'Geral - MSS – Após mensal do Prestamista',     obs: 'Após Rotina Mensal Prestamista' },
+  { nome: 'Comercial Representante – MSS',               obs: 'Após Uniface Mensal – Comissão do Fatpem e Cobrança Mensal – MSS' },
   { nome: 'Recursos Humanos – MSS – Após job06 RH',       obs: 'Após contabilização da Folha de Pagamento' },
 ];
 
@@ -361,6 +363,7 @@ const ROTINAS_FDS_NOVO = [
   { id:'fn36', hora:'00:01', texto:'Industrial / Diário - Conciliação Estoque Comercial',          caminho:'Serviço Batch/Industrial/Diário - Conciliação Estoque Comercial',                           obs:'Industrial',                                    secao:'Sábado Virada' },
   { id:'fn37', hora:'00:01', texto:'Industrial / Diário - Conciliação Estoque Almoxarifado',       caminho:'Serviço Batch/Industrial/Diário - Conciliação Estoque Almoxarifado',                        obs:'Industrial',                                    secao:'Sábado Virada' },
   { id:'fn38', hora:'00:01', texto:'Industrial / Diário – Produtos para faturamento de amostra',   caminho:'Serviço Batch/Industrial/Diário – Produtos para faturamento de amostra',                    obs:'Industrial',                                    secao:'Sábado Virada' },
+  { id:'fn38b',hora:'00:01', texto:'Diário – Processa StockReport Wamas',                          caminho:'Serviço Batch/Industrial/Diário – Processa StockReport Wamas',                              obs:'Industrial',                                    secao:'Sábado Virada' },
   { id:'fn39', hora:'00:01', texto:'Rotina Diária (Sincronização DRP)',                            caminho:'Serviço Batch/Cooperados/Rotina Diária (Sincronização DRP)',                                obs:'Cooperados',                                    secao:'Sábado Virada' },
   { id:'fn40', hora:'00:01', texto:'Sincronização Upload DRP Neogrid',                             caminho:'Serviço Batch/Almoxarifado/Sincronização Upload DRP Neogrid',                               obs:'Almoxarifado',                                  secao:'Sábado Virada' },
   { id:'fn41', hora:'00:01', texto:'Job Migração dos Dados de Rastreador',                         caminho:'Serviço Batch/Transporte/Job Migração dos Dados de Rastreador',                             obs:'Transporte',                                    secao:'Sábado Virada' },
@@ -371,6 +374,7 @@ const ROTINAS_FDS_NOVO = [
   { id:'fn46', hora:'00:01', texto:'Rotina Diária (Programa Fideliza)',                            caminho:'Serviço Batch/Cooperados/Rotina Diária (Programa Fideliza)',                                obs:'Cooperados - Movimento dia 10 é demorado',      secao:'Sábado Virada' },
   { id:'fn47', hora:'00:01', texto:'Rotina Diária (Corteva/Zoetis)',                               caminho:'Serviço Batch/Cooperados/Rotina Diária (Corteva/Zoetis)',                                   obs:'Cooperados',                                    secao:'Sábado Virada' },
   { id:'fn48', hora:'00:01', texto:'Rotina Diária (Conciliação a Granel)',                         caminho:'Serviço Batch/Cooperados/Rotina Diária (Conciliação a Granel)',                             obs:'Cooperados',                                    secao:'Sábado Virada' },
+  { id:'fn48b',hora:'00:01', texto:'Rotina Diária Pós Meia Noite',                                 caminho:'Serviço Batch/Cooperados/Rotina Motor Crédito/Rotina Diária Pós Meia Noite',                obs:'Cooperados/Rotina Motor Crédito',               secao:'Sábado Virada' },
   { id:'fn49', hora:'00:01', texto:'Carga IEPA/IEPE - 1. Confirma Carga do Movto Produtos Agrícolas', caminho:'Serviço Batch/Informações Executivas/Carga IEPA/IEPE - 1',                             obs:'Corvu - Atend. Prod. - Prod. Agric.',           secao:'Sábado Virada' },
   { id:'fn50', hora:'00:01', texto:'Carga IEPA/IEPE - 2. Confirma CNs Uniface',                    caminho:'Serviço Batch/Carga IEPA/IEPE - 2. Confirma CNs Uniface',                                  obs:'',                                              secao:'Sábado Virada' },
   { id:'fn51', hora:'00:01', texto:'Carga IEPA/IEPE - 3. Confirma NFs Fatcom',                     caminho:'Serviço Batch/Carga IEPA/IEPE - 3. Confirma NFs Fatcom',                                   obs:'Corvu – Estoque',                               secao:'Sábado Virada' },
@@ -412,5 +416,4 @@ const ROTINAS_FDS_NOVO = [
   // ════════════ DOMINGO NOITE — Resetar ════════════
   { id:'fn76', hora:'23:00', texto:'Resetar Servidores',                                           caminho:'Serviço Batch/Resetar Servidores',                                                          obs:'Domingo - Noite',                               secao:'Domingo Noite' },
   { id:'fn77', hora:'23:00', texto:'Servidores de Licença',                                        caminho:'Serviço Batch/Servidores de Licença',                                                       obs:'Domingo - Noite',                               secao:'Domingo Noite' },
-  { id:'fn78', hora:'—',     texto:'Lista de funcionários ativos – marcar no job ARHJ001 – ARHR135', caminho:'Serviço Batch/Lista de funcionários ativos – ARHJ001 – ARHR135',                        obs:'Eventual',                                      secao:'Domingo Noite' },
 ];
