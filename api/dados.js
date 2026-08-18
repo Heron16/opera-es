@@ -9,8 +9,14 @@ module.exports = async function handler(req, res) {
   const usuario = verificarToken(req);
   if (!usuario) return res.status(401).json({ erro: 'Não autenticado' });
 
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  // Garante que nem a Vercel edge nem qualquer proxy façam cache desta rota
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
   res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  res.setHeader('CDN-Cache-Control', 'no-store');
+  res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
+
   const dados = await lerDados();
   return res.json(dados);
 };

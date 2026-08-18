@@ -7,5 +7,17 @@
     { "source": "/api/trocar-senha", "destination": "/api/trocar-senha.js" },
     { "source": "/api/rotinas",      "destination": "/api/rotinas.js" },
     { "source": "/api/debug",        "destination": "/api/debug.js" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0" },
+        { "key": "Pragma",        "value": "no-cache" },
+        { "key": "Surrogate-Control", "value": "no-store" },
+        { "key": "CDN-Cache-Control", "value": "no-store" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "no-store" }
+      ]
+    }
   ]
 }
