@@ -701,8 +701,8 @@ function atualizarIndicadorPendentes() {
   }
 }
 
-// Polling: atualiza dados do servidor a cada 3 segundos (quando em modo web)
-const PROTEGER_POR_MS = 3000; // ignora updates do servidor por 3s após edição local
+// Polling: atualiza dados do servidor a cada 2 segundos (quando em modo web)
+const PROTEGER_POR_MS = 8000; // ignora updates do servidor por 8s após edição local
 function iniciarPolling() {
   if (!USAR_API) return;
   setInterval(async () => {
@@ -746,7 +746,7 @@ function iniciarPolling() {
         if (mudou) atualizarSemPerderFoco();
       }
     } catch {}
-  }, 3000);
+  }, 2000);
 }
 
 // Atualiza a tela sem sobrescrever campos que o usuário está editando
