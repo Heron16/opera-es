@@ -77,6 +77,7 @@
     <button class="btn-exportar" onclick="exportarPDF()" title="Exportar PDF">🖨️ Exportar PDF</button>
     <button class="btn-sincronizar" id="btnSincronizar" onclick="sincronizarDados()" title="Sincronizar dados locais para o servidor" style="display:none">☁️ Sincronizar</button>
     <button class="btn-gerenciar" id="btnGerenciar" onclick="window.location.href='gerenciar-rotinas.html'" title="Gerenciar rotinas" style="display:none">⚙️ Rotinas</button>
+    <button class="btn-gerenciar" id="btnDebug" onclick="copiarTokenDebug()" title="Debug" style="display:none;background:rgba(255,100,0,0.2);color:#ff6400;border-color:rgba(255,100,0,0.3);">🔑 Token</button>
     <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
 </header>
@@ -165,6 +166,25 @@ function verificarBtnSincronizar() {
   // Botão de gerenciar rotinas sempre visível para admin
   const btnG = document.getElementById('btnGerenciar');
   if (btnG) btnG.style.display = 'inline-block';
+  // Botão debug token — apenas para admin
+  const btnD = document.getElementById('btnDebug');
+  if (btnD) btnD.style.display = 'inline-block';
+}
+
+function copiarTokenDebug() {
+  const t = sessionStorage.getItem('token');
+  if (!t) return;
+  const url = 'https://opera-es-olive.vercel.app/api/debug?t=' + t;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.getElementById('btnDebug');
+      btn.textContent = '✅ Copiado!';
+      setTimeout(() => { btn.textContent = '🔑 Token'; }, 2500);
+    });
+  } else {
+    // Fallback para celular sem clipboard API
+    prompt('Copie esta URL:', url);
+  }
 }
 
 // Cabeçalho de autenticação para todas as chamadas de API
