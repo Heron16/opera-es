@@ -444,8 +444,6 @@ function renderTabBar() {
     const idF = 'tab-fds-' + fdsKey;
     html += `<button class="tab-btn tab-btn-anterior${abaAtiva===idF?' active':''}" onclick="abrirTab('${idF}')">⚠️ FDS ${label}</button>`;
   });
-    html += `<button class="tab-btn tab-btn-anterior${abaAtiva===idC?' active':''}" onclick="abrirTab('${idC}')">⚠️ Corvu ${label}</button>`;
-  });
 
   // Abas fixas normais
   TABS.forEach(t => {
