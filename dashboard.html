@@ -702,7 +702,20 @@ function atualizarIndicadorPendentes() {
 }
 
 // Polling: atualiza dados do servidor a cada 2 segundos (quando em modo web)
-const PROTEGER_POR_MS = 8000; // ignora updates do servidor por 8s após edição local
+// PROTEGER_POR_MS: após salvar localmente, ignora o servidor por este tempo
+// Valor baixo (1500ms) garante que outros usuários vejam mudanças rapidamente
+const PROTEGER_POR_MS = 1500;
+
+// Compara dois valores JSON de forma profunda (ignora ordem das chaves)
+function _valoresIguais(a, b) {
+  if (a === b) return true;
+  try {
+    const pa = typeof a === 'string' ? JSON.parse(a) : a;
+    const pb = typeof b === 'string' ? JSON.parse(b) : b;
+    return JSON.stringify(pa) === JSON.stringify(pb);
+  } catch { return a === b; }
+}
+
 function iniciarPolling() {
   if (!USAR_API) return;
   setInterval(async () => {
@@ -726,7 +739,7 @@ function iniciarPolling() {
           // 1) dado ainda está na fila de envio, OU
           // 2) foi editado localmente há menos de PROTEGER_POR_MS
           const editadoRecente = _localTimestamp[k] && (agora - _localTimestamp[k]) < PROTEGER_POR_MS;
-          if (!_filaSalvamento[k] && !editadoRecente && _cache[k] !== vStr) {
+          if (!_filaSalvamento[k] && !editadoRecente) {
             // Proteção extra para chaves Corvu: nunca sobrescreve com dado vazio
             // se o cache local já tem dados
             if (k.startsWith('corvu_dados_')) {
@@ -735,12 +748,14 @@ function iniciarPolling() {
                 const servidorObj = JSON.parse(vStr || '{}');
                 const localTemDados = Object.keys(localObj).length > 0;
                 const servidorTemDados = Object.keys(servidorObj).length > 0;
-                // Se local tem dados e servidor veio vazio, ignora
                 if (localTemDados && !servidorTemDados) return;
               } catch {}
             }
-            _cache[k] = vStr;
-            mudou = true;
+            // Comparação profunda para evitar false-negative por ordem de chaves JSON
+            if (!_valoresIguais(_cache[k], vStr)) {
+              _cache[k] = vStr;
+              mudou = true;
+            }
           }
         });
         if (mudou) atualizarSemPerderFoco();
@@ -903,12 +918,51 @@ async function mudarStatus(p,id,val,dk) {
   await saveStatus(p,s,dk); renderAll();
 }
 async function mudarCampo(p,id,campo,val,dk) {
-  const s=getStatus(p,dk); if(!s[id])s[id]={}; s[id][campo]=val; await saveStatus(p,s,dk);
+  // Salva direto no servidor sem marcar _localTimestamp da chave de status inteira.
+  // Isso garante que o polling de outros usuários NÃO seja bloqueado ao editar
+  // campos como obs, chamado, msg — que não são status e não devem suprimir sync.
+  const k = getStatusKey(p,dk);
+  const s = getStatus(p,dk);
+  if(!s[id]) s[id]={};
+  s[id][campo] = val;
+  const valorStr = JSON.stringify(s);
+  // Atualiza cache local sem marcar timestamp (não bloqueia polling)
+  _cache[k] = valorStr;
+  _filaSalvamento[k] = valorStr;
+  atualizarIndicadorPendentes();
+  try {
+    const r = await fetch(API_SALVAR, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ chave: k, valor: valorStr })
+    });
+    if (r.ok) delete _filaSalvamento[k];
+  } catch { /* será reenviado pelo flushPendentes */ }
+  atualizarIndicadorPendentes();
 }
 
 // Salva hora e re-renderiza (para refletir o estado done quando fim é preenchido)
 async function mudarCampoHora(p,id,campo,val,dk) {
-  const s=getStatus(p,dk); if(!s[id])s[id]={}; s[id][campo]=val; await saveStatus(p,s,dk); renderAll();
+  // Mesma lógica que mudarCampo: salva sem marcar _localTimestamp
+  // para não bloquear o polling dos outros usuários por 1.5s a cada horário digitado.
+  const k = getStatusKey(p,dk);
+  const s = getStatus(p,dk);
+  if(!s[id]) s[id]={};
+  s[id][campo] = val;
+  const valorStr = JSON.stringify(s);
+  _cache[k] = valorStr;
+  _filaSalvamento[k] = valorStr;
+  atualizarIndicadorPendentes();
+  try {
+    const r = await fetch(API_SALVAR, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ chave: k, valor: valorStr })
+    });
+    if (r.ok) delete _filaSalvamento[k];
+  } catch { /* será reenviado pelo flushPendentes */ }
+  atualizarIndicadorPendentes();
+  renderAll();
 }
 
 // TAB nos campos de hora: preenche com horário atual se campo estiver vazio
