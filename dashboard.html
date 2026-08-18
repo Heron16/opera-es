@@ -234,21 +234,83 @@ function getDiasAnterioresComPendentes() {
     const sRotinas = getStatus('diario', chave);
     const sCorvu = getCorvuDadosDia(chave);
 
-    // Rotinas com qualquer status marcado (inclui encerradas/erro — para não sumir inicio/fim/chamado)
+    // Rotinas com qualquer status marcado
     const temRotinasComStatus = Object.values(sRotinas).some(v => v && v.status);
 
-    // Rotinas de madrugada com status — SÓ para o dia imediatamente anterior (i===0)
-    const temMadrugadaComStatus = i === 0 && [...idsMadrugada].some(id => {
-      const v = sRotinas[id];
-      return v && v.status; // qualquer status (executando, encerrado, erro)
-    });
-
-    // Corvu tem dados se alguma linha tem início registrado (bloqueadas inclusive — mantém histórico)
+    // Corvu tem dados se alguma linha tem início registrado
     const temCorvu = Object.values(sCorvu).some(v => v && v.inicio);
 
-    if (temRotinasComStatus || temMadrugadaComStatus || temCorvu) {
-      dias.push({ diaKey: chave, temRotinas: temRotinasComStatus || temMadrugadaComStatus, temCorvu });
-    } else break;
+    if (i === 0) {
+      // Dia imediatamente anterior:
+      // Verifica se ainda há rotinas de madrugada pendentes (sem status ou sem horário final)
+      const madrugadaIds = [...idsMadrugada];
+      const todasEncerradasComFim = madrugadaIds.every(id => {
+        const v = sRotinas[id];
+        return v && v.status === 'encerrado' && v.fim && v.fim.trim() !== '';
+      });
+      const algumaMadrugadaIniciada = madrugadaIds.some(id => {
+        return sRotinas[id] && sRotinas[id].status;
+      });
+
+      // Corvu: calcula se passou 1h30 desde o último fim registrado
+      const DELAY_MS = 1.5 * 60 * 60 * 1000; // 1h30 em ms
+      const agora = new Date();
+
+      // Delay das rotinas de madrugada
+      let deveSuprimirPorDelay = false;
+      if (todasEncerradasComFim && algumaMadrugadaIniciada) {
+        let fimMaisTardio = null;
+        madrugadaIds.forEach(id => {
+          const v = sRotinas[id];
+          if (v && v.fim) {
+            const dtFim = new Date(`${diaAtual}T${v.fim}:00`);
+            if (!fimMaisTardio || dtFim > fimMaisTardio) fimMaisTardio = dtFim;
+          }
+        });
+        if (fimMaisTardio) {
+          deveSuprimirPorDelay = (agora - fimMaisTardio) >= DELAY_MS;
+        }
+      }
+
+      // Delay do Corvu: só some 1h30 após o último fim do Corvu
+      let deveSuprimirCorvu = false;
+      if (temCorvu) {
+        const corvuVals = Object.values(sCorvu);
+        // Verifica se todas as linhas com início também têm fim
+        const todasCorvuComFim = corvuVals.filter(v => v && v.inicio)
+          .every(v => v.fim && v.fim.trim() !== '');
+
+        if (todasCorvuComFim) {
+          // Pega o fim mais tardio do Corvu
+          let fimCorvu = null;
+          corvuVals.forEach(v => {
+            if (v && v.fim) {
+              const dtFim = new Date(`${diaAtual}T${v.fim}:00`);
+              if (!fimCorvu || dtFim > fimCorvu) fimCorvu = dtFim;
+            }
+          });
+          if (fimCorvu) {
+            deveSuprimirCorvu = (agora - fimCorvu) >= DELAY_MS;
+          }
+        }
+      }
+
+      const temMadrugadaPendente = algumaMadrugadaIniciada && !todasEncerradasComFim;
+      const madrugadaSemIniciar = !algumaMadrugadaIniciada;
+      const corvuAtivo = temCorvu && !deveSuprimirCorvu;
+
+      // Aba some só quando: delay das rotinas passou E delay do corvu passou (ou não tem corvu)
+      if (!deveSuprimirPorDelay && (temMadrugadaPendente || madrugadaSemIniciar || temRotinasComStatus || corvuAtivo)) {
+        dias.push({ diaKey: chave, temRotinas: true, temCorvu: corvuAtivo });
+      } else if (deveSuprimirPorDelay && (temRotinasComStatus || corvuAtivo)) {
+        dias.push({ diaKey: chave, temRotinas: temRotinasComStatus, temCorvu: corvuAtivo });
+      }
+    } else {
+      // Dias anteriores mais antigos: só aparecem se tiverem dados
+      if (temRotinasComStatus || temCorvu) {
+        dias.push({ diaKey: chave, temRotinas: temRotinasComStatus, temCorvu });
+      } else break;
+    }
   }
   return dias;
 }
