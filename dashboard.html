@@ -218,6 +218,73 @@ let abaAtiva = 'diario';
 // Seções que pertencem ao dia anterior (madrugada executada após virar o dia)
 const SECOES_DIA_ANTERIOR = new Set(['Após meia-noite','Após 03:00h','Acompanhamento BI']);
 
+// ── FDS DINÂMICO POR DATA ─────────────────────────────────────────────
+// Retorna a chave do último sábado (ou domingo) anterior ao dia atual
+function getUltimoFdsKey() {
+  const hoje = new Date(diaAtual + 'T12:00:00');
+  const diaSemana = hoje.getDay(); // 0=dom, 6=sab
+  // Volta até o sábado mais recente
+  let diasAtras = diaSemana === 0 ? 1 : diaSemana === 6 ? 7 : diaSemana + 1;
+  const sab = new Date(hoje);
+  sab.setDate(sab.getDate() - diasAtras);
+  return `${sab.getFullYear()}-${String(sab.getMonth()+1).padStart(2,'0')}-${String(sab.getDate()).padStart(2,'0')}`;
+}
+
+function getFdsAnterioresComPendentes() {
+  const DELAY_MS = 1.5 * 60 * 60 * 1000;
+  const agora = new Date();
+  const resultado = [];
+
+  // Verifica os últimos 2 finais de semana
+  for (let semana = 1; semana <= 2; semana++) {
+    const hoje = new Date(diaAtual + 'T12:00:00');
+    const diaSemana = hoje.getDay();
+    let diasAtras = diaSemana === 0 ? 1 : diaSemana === 6 ? 7 : diaSemana + 1;
+    diasAtras += (semana - 1) * 7;
+    const sab = new Date(hoje);
+    sab.setDate(sab.getDate() - diasAtras);
+    const fdsKey = `${sab.getFullYear()}-${String(sab.getMonth()+1).padStart(2,'0')}-${String(sab.getDate()).padStart(2,'0')}`;
+
+    // Só mostra FDS anterior se não estamos no próprio sábado/domingo
+    const ehSabado = hoje.getDay() === 6;
+    const ehDomingo = hoje.getDay() === 0;
+    if (semana === 1 && (ehSabado || ehDomingo)) continue;
+
+    const sStatus = getStatus('fds', fdsKey);
+    const temStatus = Object.values(sStatus).some(v => v && v.status);
+    if (!temStatus) break;
+
+    // Verifica se todas encerradas com fim
+    const todasEncerradas = Object.values(sStatus)
+      .filter(v => v && v.status)
+      .every(v => v.status === 'encerrado' && v.fim && v.fim.trim() !== '');
+
+    if (!todasEncerradas) {
+      resultado.push({ fdsKey });
+      continue;
+    }
+
+    // Calcula 1h30 após o último fim
+    let fimMaisTardio = null;
+    // O FDS termina no domingo (fdsKey + 1 dia)
+    const dom = new Date(sab); dom.setDate(dom.getDate() + 1);
+    const domKey = `${dom.getFullYear()}-${String(dom.getMonth()+1).padStart(2,'0')}-${String(dom.getDate()).padStart(2,'0')}`;
+    Object.values(sStatus).forEach(v => {
+      if (v && v.fim) {
+        // Tenta no domingo primeiro, depois no sábado
+        let dtFim = new Date(`${domKey}T${v.fim}:00`);
+        if (dtFim > agora) dtFim = new Date(`${fdsKey}T${v.fim}:00`);
+        if (!fimMaisTardio || dtFim > fimMaisTardio) fimMaisTardio = dtFim;
+      }
+    });
+
+    if (fimMaisTardio && (agora - fimMaisTardio) < DELAY_MS) {
+      resultado.push({ fdsKey });
+    }
+  }
+  return resultado;
+}
+
 function getDiasAnterioresComPendentes() {
   const dias = [];
   let chave = diaAtual;
@@ -347,9 +414,10 @@ async function saveCorvuCampoDia(diaKey, idx, campo, val) {
 }
 
 function garantirTabDinamica(diaKey) {
-  // IDs usados: tab-diario-YYYY-MM-DD e tab-corvu-YYYY-MM-DD
+  // IDs usados: tab-diario-YYYY-MM-DD, tab-corvu-YYYY-MM-DD, tab-fds-YYYY-MM-DD
   const idRotinas = 'tab-diario-' + diaKey;
   const idCorvu   = 'tab-corvu-'  + diaKey;
+  const idFds     = 'tab-fds-'    + diaKey;
   if (!document.getElementById(idRotinas)) {
     const d1 = document.createElement('div');
     d1.id = idRotinas; d1.className = 'tab-content';
@@ -360,13 +428,20 @@ function garantirTabDinamica(diaKey) {
     d2.id = idCorvu; d2.className = 'tab-content';
     document.body.appendChild(d2);
   }
+  if (!document.getElementById(idFds)) {
+    const d3 = document.createElement('div');
+    d3.id = idFds; d3.className = 'tab-content';
+    document.body.appendChild(d3);
+  }
 }
 
 function renderTabBar() {
   const diasAnt = getDiasAnterioresComPendentes();
+  const fdsAnt  = getFdsAnterioresComPendentes();
 
   // Garante que os divs das abas dinâmicas existam
   diasAnt.forEach(({ diaKey }) => garantirTabDinamica(diaKey));
+  fdsAnt.forEach(({ fdsKey }) => garantirTabDinamica(fdsKey));
 
   const [,m,d] = diaAtual.split('-');
   let html = '';
@@ -378,6 +453,16 @@ function renderTabBar() {
     const idR = 'tab-diario-' + diaKey;
     const idC = 'tab-corvu-'  + diaKey;
     html += `<button class="tab-btn tab-btn-anterior${abaAtiva===idR?' active':''}" onclick="abrirTab('${idR}')">⚠️ Diário ${label}</button>`;
+    html += `<button class="tab-btn tab-btn-anterior${abaAtiva===idC?' active':''}" onclick="abrirTab('${idC}')">⚠️ Corvu ${label}</button>`;
+  });
+
+  // Abas do FDS anterior
+  fdsAnt.forEach(({ fdsKey }) => {
+    const [,fm,fd] = fdsKey.split('-');
+    const label = `${fd}/${fm}`;
+    const idF = 'tab-fds-' + fdsKey;
+    html += `<button class="tab-btn tab-btn-anterior${abaAtiva===idF?' active':''}" onclick="abrirTab('${idF}')">⚠️ FDS ${label}</button>`;
+  });
     html += `<button class="tab-btn tab-btn-anterior${abaAtiva===idC?' active':''}" onclick="abrirTab('${idC}')">⚠️ Corvu ${label}</button>`;
   });
 
@@ -421,6 +506,12 @@ function renderAll() {
     }
     return;
   }
+  if (a.startsWith('tab-fds-')) {
+    const dk = a.replace('tab-fds-', '');
+    garantirTabDinamica(dk);
+    renderRotinas('fds-' + dk, _rotinasFds, 'fds', dk);
+    return;
+  }
 
   if(a==='diario')      renderRotinas('diario',      _rotinasDiaria,       'diario',      diaAtual);
   if(a==='corvudiario') renderCorvu('corvudiario',   _rotinasCorvu,        'corvu');
@@ -438,9 +529,14 @@ function exportarPDF() {
   let dkPDF = diaAtual;
   if (abaAtiva.startsWith('tab-diario-')) dkPDF = abaAtiva.replace('tab-diario-', '');
   else if (abaAtiva.startsWith('tab-corvu-')) dkPDF = abaAtiva.replace('tab-corvu-', '');
+  else if (abaAtiva.startsWith('tab-fds-'))   dkPDF = abaAtiva.replace('tab-fds-', '');
 
   const [y,m,d] = dkPDF.split('-');
-  const nomeAba = nomes[abaAtiva] || (abaAtiva.startsWith('tab-diario-') ? 'Diaria' : abaAtiva.startsWith('tab-corvu-') ? 'Corvu_Diario' : abaAtiva);
+  const nomeAba = nomes[abaAtiva] || (
+    abaAtiva.startsWith('tab-diario-') ? 'Diaria' :
+    abaAtiva.startsWith('tab-corvu-')  ? 'Corvu_Diario' :
+    abaAtiva.startsWith('tab-fds-')    ? 'Final_de_Semana' : abaAtiva
+  );
   const nomePDF = `${nomeAba}_${d}-${m}-${y}`;
   document.title = nomePDF;
 
