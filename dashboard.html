@@ -75,9 +75,7 @@
     <span id="relogioHeader"></span>
     <span class="user-badge" id="userBadge"></span>
     <button class="btn-exportar" onclick="exportarPDF()" title="Exportar PDF">🖨️ Exportar PDF</button>
-    <button class="btn-sincronizar" id="btnSincronizar" onclick="sincronizarDados()" title="Sincronizar dados locais para o servidor" style="display:none">☁️ Sincronizar</button>
     <button class="btn-gerenciar" id="btnGerenciar" onclick="window.location.href='gerenciar-rotinas.html'" title="Gerenciar rotinas" style="display:none">⚙️ Rotinas</button>
-    <button class="btn-gerenciar" id="btnDebug" onclick="copiarTokenDebug()" title="Debug" style="display:none;background:rgba(255,100,0,0.2);color:#ff6400;border-color:rgba(255,100,0,0.3);">🔑 Token</button>
     <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
 </header>
@@ -103,88 +101,11 @@ if (!user || !token || !['operador','admin'].includes(role)) {
 document.getElementById('userBadge').textContent = '👤 ' + user + ' (' + role + ')';
 function logout() { sessionStorage.clear(); window.location.href = 'index.html'; }
 
-// ── SINCRONIZAÇÃO localStorage → Redis ───────────────────────────────
-// Copia todos os dados do localStorage para o servidor (migração única)
-async function sincronizarDados() {
-  const btn = document.getElementById('btnSincronizar');
-  btn.disabled = true;
-  btn.textContent = '⏳ Sincronizando...';
-
-  // Coleta todos os dados relevantes do localStorage
-  const dados = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && (k.startsWith('status_') || k.startsWith('blocked_') ||
-              k.startsWith('corvu_') || k.startsWith('horarios_'))) {
-      dados[k] = localStorage.getItem(k);
-    }
-  }
-
-  const qtd = Object.keys(dados).length;
-  if (qtd === 0) {
-    btn.textContent = '✓ Nada a sincronizar';
-    setTimeout(() => { btn.textContent = '☁️ Sincronizar'; btn.disabled = false; }, 2000);
-    return;
-  }
-
-  try {
-    const r = await fetch('/api/migrar', {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify(dados)
-    });
-    const data = await r.json();
-    if (r.ok) {
-      btn.textContent = `✓ ${data.chaves} chaves sincronizadas!`;
-      btn.style.background = 'rgba(63,185,80,0.2)';
-      btn.style.color = '#3fb950';
-      btn.style.borderColor = 'rgba(63,185,80,0.4)';
-      setTimeout(() => {
-        btn.textContent = '☁️ Sincronizar';
-        btn.style.background = '';
-        btn.style.color = '';
-        btn.style.borderColor = '';
-        btn.disabled = false;
-      }, 3000);
-    } else {
-      btn.textContent = '✖ Erro: ' + (data.erro || 'falha');
-      btn.disabled = false;
-    }
-  } catch {
-    btn.textContent = '✖ Sem conexão';
-    btn.disabled = false;
-  }
-}
-
-// Mostra botão de sincronizar só para admin e quando há dados no localStorage
+// Mostra botão de gerenciar rotinas só para admin
 function verificarBtnSincronizar() {
   if (role !== 'admin') return;
-  const temDados = Array.from({length: localStorage.length}, (_,i) => localStorage.key(i))
-    .some(k => k && (k.startsWith('status_') || k.startsWith('corvu_')));
-  const btn = document.getElementById('btnSincronizar');
-  if (btn) btn.style.display = temDados ? 'inline-block' : 'none';
-  // Botão de gerenciar rotinas sempre visível para admin
   const btnG = document.getElementById('btnGerenciar');
   if (btnG) btnG.style.display = 'inline-block';
-  // Botão debug token — apenas para admin
-  const btnD = document.getElementById('btnDebug');
-  if (btnD) btnD.style.display = 'inline-block';
-}
-
-function copiarTokenDebug() {
-  const t = sessionStorage.getItem('token');
-  if (!t) return;
-  const url = 'https://opera-es-olive.vercel.app/api/debug?t=' + t;
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(url).then(() => {
-      const btn = document.getElementById('btnDebug');
-      btn.textContent = '✅ Copiado!';
-      setTimeout(() => { btn.textContent = '🔑 Token'; }, 2500);
-    });
-  } else {
-    // Fallback para celular sem clipboard API
-    prompt('Copie esta URL:', url);
-  }
 }
 
 // Cabeçalho de autenticação para todas as chamadas de API
