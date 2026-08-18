@@ -49,14 +49,14 @@ async function redisSet(chave, valor) {
 }
 
 // HSET atômico: define um campo dentro de um hash Redis
-// Usado pelo /api/salvar para gravar cada chave sem race condition
+// Upstash REST: POST /hset/<hash>/<field>/<value>  (args na URL path)
 async function redisHSet(hashKey, campo, valor) {
   if (!REDIS_URL || !REDIS_TOKEN) return false;
   try {
-    const r = await fetch(`${REDIS_URL}/hset/${encodeURIComponent(hashKey)}`, {
+    const url = `${REDIS_URL}/hset/${encodeURIComponent(hashKey)}/${encodeURIComponent(campo)}/${encodeURIComponent(valor)}`;
+    const r = await fetch(url, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${REDIS_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify([campo, valor]),
+      headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
     });
     return r.ok;
   } catch { return false; }
@@ -104,12 +104,14 @@ async function lerDados() {
           method: 'POST',
           headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
         }).catch(() => {});
-        // Salva cada campo no hash
-        const flat = entries.flatMap(([k, v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)]);
-        await fetch(`${REDIS_URL}/hset/${encodeURIComponent(REDIS_CHAVE_DADOS)}`, {
+        // Salva cada campo no hash com formato correto (args na URL path)
+        const args = entries.flatMap(([k, v]) => [
+          encodeURIComponent(k),
+          encodeURIComponent(typeof v === 'string' ? v : JSON.stringify(v))
+        ]).join('/');
+        await fetch(`${REDIS_URL}/hset/${encodeURIComponent(REDIS_CHAVE_DADOS)}/${args}`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${REDIS_TOKEN}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(flat),
+          headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
         }).catch(() => {});
       }
     }
@@ -123,11 +125,14 @@ async function salvarDados(dados) {
   if (!REDIS_URL || !REDIS_TOKEN || typeof dados !== 'object') return;
   const entries = Object.entries(dados);
   if (entries.length === 0) return;
-  const flat = entries.flatMap(([k, v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)]);
-  await fetch(`${REDIS_URL}/hset/${encodeURIComponent(REDIS_CHAVE_DADOS)}`, {
+  // Upstash REST HSET: POST /hset/<hash>/<field>/<value>/... (args na URL path)
+  const args = entries.flatMap(([k, v]) => [
+    encodeURIComponent(k),
+    encodeURIComponent(typeof v === 'string' ? v : JSON.stringify(v))
+  ]).join('/');
+  await fetch(`${REDIS_URL}/hset/${encodeURIComponent(REDIS_CHAVE_DADOS)}/${args}`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${REDIS_TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(flat),
+    headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
   });
 }
 
