@@ -219,70 +219,51 @@ let abaAtiva = 'diario';
 const SECOES_DIA_ANTERIOR = new Set(['Após meia-noite','Após 03:00h','Acompanhamento BI']);
 
 // ── FDS DINÂMICO POR DATA ─────────────────────────────────────────────
-// Retorna a chave do último sábado (ou domingo) anterior ao dia atual
-function getUltimoFdsKey() {
-  const hoje = new Date(diaAtual + 'T12:00:00');
-  const diaSemana = hoje.getDay(); // 0=dom, 6=sab
-  // Volta até o sábado mais recente
-  let diasAtras = diaSemana === 0 ? 1 : diaSemana === 6 ? 7 : diaSemana + 1;
-  const sab = new Date(hoje);
-  sab.setDate(sab.getDate() - diasAtras);
-  return `${sab.getFullYear()}-${String(sab.getMonth()+1).padStart(2,'0')}-${String(sab.getDate()).padStart(2,'0')}`;
-}
-
 function getFdsAnterioresComPendentes() {
-  const DELAY_MS = 1.5 * 60 * 60 * 1000;
-  const agora = new Date();
-  const resultado = [];
+  try {
+    const DELAY_MS = 1.5 * 60 * 60 * 1000;
+    const agora = new Date();
+    const resultado = [];
 
-  // Verifica os últimos 2 finais de semana
-  for (let semana = 1; semana <= 2; semana++) {
-    const hoje = new Date(diaAtual + 'T12:00:00');
-    const diaSemana = hoje.getDay();
-    let diasAtras = diaSemana === 0 ? 1 : diaSemana === 6 ? 7 : diaSemana + 1;
-    diasAtras += (semana - 1) * 7;
-    const sab = new Date(hoje);
-    sab.setDate(sab.getDate() - diasAtras);
-    const fdsKey = `${sab.getFullYear()}-${String(sab.getMonth()+1).padStart(2,'0')}-${String(sab.getDate()).padStart(2,'0')}`;
+    for (let semana = 1; semana <= 2; semana++) {
+      const hoje = new Date(diaAtual + 'T12:00:00');
+      // Se hoje é sábado ou domingo, não mostra FDS anterior da semana 1
+      if (semana === 1 && (hoje.getDay() === 6 || hoje.getDay() === 0)) continue;
 
-    // Só mostra FDS anterior se não estamos no próprio sábado/domingo
-    const ehSabado = hoje.getDay() === 6;
-    const ehDomingo = hoje.getDay() === 0;
-    if (semana === 1 && (ehSabado || ehDomingo)) continue;
+      // Calcula o sábado da semana anterior
+      const diaSemana = hoje.getDay();
+      let diasAtras = diaSemana === 0 ? 1 : diaSemana === 6 ? 7 : diaSemana + 1;
+      diasAtras += (semana - 1) * 7;
+      const sab = new Date(hoje);
+      sab.setDate(sab.getDate() - diasAtras);
+      const fdsKey = `${sab.getFullYear()}-${String(sab.getMonth()+1).padStart(2,'0')}-${String(sab.getDate()).padStart(2,'0')}`;
 
-    const sStatus = getStatus('fds', fdsKey);
-    const temStatus = Object.values(sStatus).some(v => v && v.status);
-    if (!temStatus) break;
+      const sStatus = getStatus('fds', fdsKey);
+      const temStatus = Object.values(sStatus).some(v => v && v.status);
+      if (!temStatus) break;
 
-    // Verifica se todas encerradas com fim
-    const todasEncerradas = Object.values(sStatus)
-      .filter(v => v && v.status)
-      .every(v => v.status === 'encerrado' && v.fim && v.fim.trim() !== '');
+      // Verifica se todas encerradas com fim
+      const todasEncerradas = Object.values(sStatus)
+        .filter(v => v && v.status)
+        .every(v => v.status === 'encerrado' && v.fim && v.fim.trim() !== '');
 
-    if (!todasEncerradas) {
-      resultado.push({ fdsKey });
-      continue;
+      if (!todasEncerradas) { resultado.push({ fdsKey }); continue; }
+
+      // Calcula 1h30 após o último fim
+      let fimMaisTardio = null;
+      const dom = new Date(sab); dom.setDate(dom.getDate() + 1);
+      const domKey = `${dom.getFullYear()}-${String(dom.getMonth()+1).padStart(2,'0')}-${String(dom.getDate()).padStart(2,'0')}`;
+      Object.values(sStatus).forEach(v => {
+        if (v && v.fim) {
+          let dtFim = new Date(`${domKey}T${v.fim}:00`);
+          if (dtFim > agora) dtFim = new Date(`${fdsKey}T${v.fim}:00`);
+          if (!fimMaisTardio || dtFim > fimMaisTardio) fimMaisTardio = dtFim;
+        }
+      });
+      if (fimMaisTardio && (agora - fimMaisTardio) < DELAY_MS) resultado.push({ fdsKey });
     }
-
-    // Calcula 1h30 após o último fim
-    let fimMaisTardio = null;
-    // O FDS termina no domingo (fdsKey + 1 dia)
-    const dom = new Date(sab); dom.setDate(dom.getDate() + 1);
-    const domKey = `${dom.getFullYear()}-${String(dom.getMonth()+1).padStart(2,'0')}-${String(dom.getDate()).padStart(2,'0')}`;
-    Object.values(sStatus).forEach(v => {
-      if (v && v.fim) {
-        // Tenta no domingo primeiro, depois no sábado
-        let dtFim = new Date(`${domKey}T${v.fim}:00`);
-        if (dtFim > agora) dtFim = new Date(`${fdsKey}T${v.fim}:00`);
-        if (!fimMaisTardio || dtFim > fimMaisTardio) fimMaisTardio = dtFim;
-      }
-    });
-
-    if (fimMaisTardio && (agora - fimMaisTardio) < DELAY_MS) {
-      resultado.push({ fdsKey });
-    }
-  }
-  return resultado;
+    return resultado;
+  } catch(e) { return []; }
 }
 
 function getDiasAnterioresComPendentes() {
