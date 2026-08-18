@@ -9,6 +9,8 @@ module.exports = async function handler(req, res) {
   const usuario = verificarToken(req);
   if (!usuario) return res.status(401).json({ erro: 'Não autenticado' });
 
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
   const dados = await lerDados();
   return res.json(dados);
 };

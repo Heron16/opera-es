@@ -388,7 +388,6 @@ async function saveCorvuCampoDia(diaKey, idx, campo, val) {
     });
     if (r.ok) {
       delete _filaSalvamento[k];
-      _localTimestamp[k] = Date.now();
     }
   } catch { /* ficará na fila e será reenviado pelo flushPendentes */ }
   atualizarIndicadorPendentes();
@@ -703,7 +702,7 @@ function atualizarIndicadorPendentes() {
 }
 
 // Polling: atualiza dados do servidor a cada 3 segundos (quando em modo web)
-const PROTEGER_POR_MS = 15000; // ignora updates do servidor por 15s após edição local
+const PROTEGER_POR_MS = 3000; // ignora updates do servidor por 3s após edição local
 function iniciarPolling() {
   if (!USAR_API) return;
   setInterval(async () => {
@@ -755,11 +754,49 @@ function atualizarSemPerderFoco() {
   const focusado = document.activeElement;
   const tagAtiva = focusado ? focusado.tagName : '';
 
-  // Se o usuário está digitando em algum input/textarea/select, não re-renderiza agora
-  // O próximo ciclo de polling vai atualizar quando ele sair do campo
-  if (tagAtiva === 'INPUT' || tagAtiva === 'TEXTAREA' || tagAtiva === 'SELECT') return;
+  // Se nenhum campo está em foco, re-renderiza normalmente
+  if (tagAtiva !== 'INPUT' && tagAtiva !== 'TEXTAREA' && tagAtiva !== 'SELECT') {
+    renderAll();
+    return;
+  }
+
+  // Há um campo em foco: re-renderiza mas restaura o foco e o valor do campo ativo
+  // para que o usuário não perca o que está digitando
+  const valorAntes   = focusado.value;
+  const selStart     = focusado.selectionStart;
+  const selEnd       = focusado.selectionEnd;
+
+  // Identifica o campo pelo id ou por um atributo estável (onblur/onchange)
+  // para reencontrar o elemento correto após o re-render
+  const idAntes      = focusado.id;
+  const onblurAntes  = focusado.getAttribute('onblur')  || '';
+  const onchangeAntes= focusado.getAttribute('onchange')|| '';
 
   renderAll();
+
+  // Tenta restaurar o foco no mesmo campo após o re-render
+  let novoFoco = null;
+  if (idAntes) {
+    novoFoco = document.getElementById(idAntes);
+  }
+  if (!novoFoco && onblurAntes) {
+    novoFoco = document.querySelector(`[onblur="${CSS.escape ? onblurAntes.replace(/"/g,'\\"') : onblurAntes}"]`) ||
+               [...document.querySelectorAll('input,textarea,select')]
+                 .find(el => el.getAttribute('onblur') === onblurAntes);
+  }
+  if (!novoFoco && onchangeAntes) {
+    novoFoco = [...document.querySelectorAll('select')]
+      .find(el => el.getAttribute('onchange') === onchangeAntes);
+  }
+
+  if (novoFoco) {
+    novoFoco.focus();
+    // Restaura o valor digitado (pode ter sido substituído pelo render)
+    if (novoFoco.tagName !== 'SELECT') {
+      novoFoco.value = valorAntes;
+      try { novoFoco.setSelectionRange(selStart, selEnd); } catch {}
+    }
+  }
 }
 
 // ── Funções de storage que usam a camada unificada ────────────────────
@@ -840,8 +877,6 @@ async function saveCorvuCampo(p, idx, campo, val) {
     });
     if (r.ok) {
       delete _filaSalvamento[chave];
-      // Renova proteção após save confirmado
-      _localTimestamp[chave] = Date.now();
     }
   } catch { /* ficará na fila e será reenviado pelo flushPendentes */ }
   atualizarIndicadorPendentes();
