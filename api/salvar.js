@@ -1,25 +1,5 @@
-// POST /api/salvar — salva uma chave individual
-const { lerDados, salvarDados, verificarToken, setCors, parseBody } = require('./_lib/redis');
-
-// Salva diretamente no Redis com HSET (hash) para evitar race condition
-// Cada chave do dashboard é um campo do hash 'coamo:dados'
-const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL;
-const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-async function redisHSet(campo, valor) {
-  if (!REDIS_URL || !REDIS_TOKEN) return false;
-  try {
-    const r = await fetch(`${REDIS_URL}/hset/coamo:dados`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${REDIS_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify([campo, valor]),
-    });
-    return r.ok;
-  } catch { return false; }
-}
+// POST /api/salvar — salva uma chave individual de forma atômica
+const { redisHSet, REDIS_CHAVE_DADOS, lerDados, salvarDados, verificarToken, setCors, parseBody } = require('./_lib/redis');
 
 module.exports = async function handler(req, res) {
   setCors(res);
@@ -37,17 +17,17 @@ module.exports = async function handler(req, res) {
   const chave = body.chave;
   const valor = body.valor;
 
-  if (!chave) return res.status(400).json({ erro: 'Chave obrigatória', body_recebido: JSON.stringify(body).substring(0,200) });
+  if (!chave) return res.status(400).json({ erro: 'Chave obrigatória' });
 
   if (chave.startsWith('horarios_') && usuario.role !== 'admin')
     return res.status(403).json({ erro: 'Apenas administradores podem editar horários.' });
 
   try {
-    // Tenta salvar diretamente via HSET (atômico, sem race condition)
-    const ok = await redisHSet(chave, valor);
+    // Salva diretamente como campo do hash — atômico, sem race condition
+    const ok = await redisHSet(REDIS_CHAVE_DADOS, chave, typeof valor === 'string' ? valor : JSON.stringify(valor));
     if (ok) return res.json({ ok: true });
 
-    // Fallback: método antigo (lê tudo e salva tudo)
+    // Fallback caso HSET falhe (ex: chave ainda é string no Redis)
     const dados = await lerDados();
     dados[chave] = valor;
     await salvarDados(dados);

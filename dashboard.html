@@ -546,7 +546,7 @@ function atualizarIndicadorPendentes() {
 }
 
 // Polling: atualiza dados do servidor a cada 3 segundos (quando em modo web)
-const PROTEGER_POR_MS = 300000; // ignora updates do servidor por 5min após edição local
+const PROTEGER_POR_MS = 15000; // ignora updates do servidor por 15s após edição local
 function iniciarPolling() {
   if (!USAR_API) return;
   setInterval(async () => {
