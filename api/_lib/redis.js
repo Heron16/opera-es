@@ -46,7 +46,6 @@ async function redisGet(chave) {
 
 async function redisSet(chave, valor) {
   if (!REDIS_URL || !REDIS_TOKEN) return;
-  // Upstash REST API: POST /set/chave com valor no body como texto plano
   await fetch(`${REDIS_URL}/set/${encodeURIComponent(chave)}`, {
     method: 'POST',
     headers: {
@@ -57,18 +56,74 @@ async function redisSet(chave, valor) {
   });
 }
 
+// Lê o hash coamo:dados como objeto {campo: valor}
+async function redisHGetAll(chave) {
+  if (!REDIS_URL || !REDIS_TOKEN) return null;
+  try {
+    const r = await fetch(`${REDIS_URL}/hgetall/${encodeURIComponent(chave)}`, {
+      headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
+    });
+    const json = await r.json();
+    // Upstash retorna array [campo1, valor1, campo2, valor2, ...]
+    if (!json.result || !Array.isArray(json.result)) return null;
+    const obj = {};
+    for (let i = 0; i < json.result.length; i += 2) {
+      obj[json.result[i]] = json.result[i + 1];
+    }
+    return obj;
+  } catch { return null; }
+}
+
 // ── Dados da aplicação ────────────────────────────────────────────────
 async function lerDados() {
   try {
+    // Tenta ler como hash (novo formato atômico)
+    const hash = await redisHGetAll(REDIS_CHAVE_DADOS);
+    if (hash && Object.keys(hash).length > 0) return hash;
+
+    // Fallback: lê como string JSON (formato antigo)
     const raw = await redisGet(REDIS_CHAVE_DADOS);
-    return raw ? JSON.parse(raw) : {};
+    if (!raw) return {};
+    const dados = JSON.parse(raw);
+
+    // Migra automaticamente do formato antigo (string JSON) para hash
+    // fazendo um HSET para cada campo existente
+    if (REDIS_URL && REDIS_TOKEN && typeof dados === 'object') {
+      const entries = Object.entries(dados);
+      if (entries.length > 0) {
+        // Monta o array [campo1, valor1, campo2, valor2, ...]
+        const flat = entries.flatMap(([k, v]) => [k, v]);
+        await fetch(`${REDIS_URL}/hset/${encodeURIComponent(REDIS_CHAVE_DADOS)}`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${REDIS_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(flat),
+        }).catch(() => {}); // migração silenciosa — não bloqueia se falhar
+      }
+    }
+    return dados;
   } catch {
     return {};
   }
 }
 
 async function salvarDados(dados) {
-  await redisSet(REDIS_CHAVE_DADOS, JSON.stringify(dados));
+  // Mantido para compatibilidade (usado por migrar.js, rotinas.js, etc.)
+  // Salva como hash campo a campo
+  if (!REDIS_URL || !REDIS_TOKEN) return;
+  const entries = Object.entries(dados);
+  if (entries.length === 0) return;
+  const flat = entries.flatMap(([k, v]) => [k, v]);
+  await fetch(`${REDIS_URL}/hset/${encodeURIComponent(REDIS_CHAVE_DADOS)}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${REDIS_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(flat),
+  });
 }
 
 // ── Usuários ──────────────────────────────────────────────────────────
