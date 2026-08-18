@@ -23,6 +23,10 @@
     .btn-remove  { background: transparent; color: #f85149; border: 1px solid #f85149;
                    border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; }
     .btn-remove:hover { background: rgba(248,81,73,0.15); }
+    .btn-mover   { background: transparent; color: #8b949e; border: 1px solid #30363d;
+                   border-radius: 4px; padding: 2px 6px; font-size: 0.75rem; cursor: pointer; }
+    .btn-mover:hover { background: #21262d; color: #c9d1d9; }
+    .btn-mover:disabled { opacity: 0.3; cursor: default; }
 
     main { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
 
@@ -75,6 +79,7 @@
     .rotina-linha.removida { opacity: 0.4; border-color: #f85149; background: rgba(248,81,73,0.05); }
     .rotina-linha.adicionada { border-color: #3fb950; background: rgba(63,185,80,0.05); }
     .rotina-info { flex: 1; min-width: 0; }
+    .rotina-btns { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
     .rotina-nome { font-size: 0.85rem; color: #c9d1d9; font-weight: 600; }
     .rotina-detalhe { font-size: 0.75rem; color: #8b949e; margin-top: 2px; }
     .badge-hora { font-size: 0.72rem; background: #21262d; color: #8b949e;
@@ -319,7 +324,6 @@ function authHeaders() {
 }
 
 // ── ESTADO ───────────────────────────────────────────────────────────
-// Customizações carregadas do servidor
 let custom = {
   removidos_diaria: [], adicionados_diaria: [],
   removidos_corvu: [],  adicionados_corvu: [],
@@ -336,7 +340,6 @@ async function init() {
     const r = await fetch('/api/rotinas', { headers: authHeaders() });
     if (r.ok) {
       const data = await r.json();
-      // Merge seguro — preserva arrays vazios se não existirem no servidor
       custom = {
         removidos_diaria:    data.removidos_diaria    || [],
         adicionados_diaria:  data.adicionados_diaria  || [],
@@ -348,6 +351,9 @@ async function init() {
         adicionados_mensal:  data.adicionados_mensal  || [],
         removidos_crvmensal: data.removidos_crvmensal || [],
         adicionados_crvmensal: data.adicionados_crvmensal || [],
+        // Ordem global das listas Corvu (permite mover qualquer item, base ou novo)
+        ordem_corvu:      data.ordem_corvu      || null,
+        ordem_crvmensal:  data.ordem_crvmensal  || null,
       };
     }
   } catch {}
@@ -398,6 +404,8 @@ function renderDiaria() {
     itens.forEach(r => {
       const isRemovida = removidos.has(r.id);
       const isNova = !r._base;
+      // Índice dentro de adicionados_diaria para os botões de mover
+      const idxAdd = isNova ? adicionados.findIndex(x => x.id === r.id) : -1;
       html += `<div class="rotina-linha${isRemovida ? ' removida' : ''}${isNova ? ' adicionada' : ''}">
         <div class="rotina-info">
           <div class="rotina-nome">
@@ -408,12 +416,18 @@ function renderDiaria() {
           </div>
           ${r.obs ? `<div class="rotina-detalhe">${r.obs}</div>` : ''}
         </div>
-        ${isRemovida
-          ? `<button class="btn-remove" onclick="restaurar('diaria','${escId(r.id)}')">↩ Restaurar</button>`
-          : isNova
-            ? `<button class="btn-remove" onclick="removerAdicionada('diaria','${escId(r.id)}')">🗑 Remover</button>`
-            : `<button class="btn-remove" onclick="remover('diaria','${escId(r.id)}')">🗑 Remover</button>`
-        }
+        <div class="rotina-btns">
+          ${isNova ? `
+            <button class="btn-mover" title="Mover para cima" ${idxAdd === 0 ? 'disabled' : ''} onclick="moverAdicionada('diaria',${idxAdd},-1)">↑</button>
+            <button class="btn-mover" title="Mover para baixo" ${idxAdd === adicionados.length - 1 ? 'disabled' : ''} onclick="moverAdicionada('diaria',${idxAdd},1)">↓</button>
+          ` : ''}
+          ${isRemovida
+            ? `<button class="btn-remove" onclick="restaurar('diaria','${escId(r.id)}')">↩ Restaurar</button>`
+            : isNova
+              ? `<button class="btn-remove" onclick="removerAdicionada('diaria','${escId(r.id)}')">🗑 Remover</button>`
+              : `<button class="btn-remove" onclick="remover('diaria','${escId(r.id)}')">🗑 Remover</button>`
+          }
+        </div>
       </div>`;
     });
     html += '</div>';
@@ -424,14 +438,46 @@ function renderDiaria() {
 function renderCorvu() {
   const removidos = new Set(custom.removidos_corvu);
   const adicionados = custom.adicionados_corvu || [];
-  const todos = [...ROTINAS_CORVU.map(n => ({ nome: n, _base: true })),
-                 ...adicionados.map(n => ({ nome: n, _base: false }))];
+
+  // Lista base de nomes
+  const baseNomes = ROTINAS_CORVU.filter(n => !removidos.has(n));
+  const addNomes  = adicionados.filter(n => !removidos.has(n));
+
+  // Ordem global: se existe uma ordem salva, usa ela; senão base + adicionados
+  // A ordem salva é um array de nomes (strings)
+  let ordemSalva = custom.ordem_corvu || null;
+  let todos;
+  if (ordemSalva && ordemSalva.length > 0) {
+    // Reconstrói a lista respeitando a ordem salva:
+    // 1) itens da ordem que ainda existem (não removidos)
+    const setValidos = new Set([...baseNomes, ...addNomes]);
+    const ordemFiltrada = ordemSalva.filter(n => setValidos.has(n));
+    // 2) itens que não estão na ordem (novos adicionados depois de salvar)
+    const naOrdem = new Set(ordemFiltrada);
+    const sobras = addNomes.filter(n => !naOrdem.has(n));
+    todos = [...ordemFiltrada, ...sobras].map(n => ({
+      nome: n,
+      _base: ROTINAS_CORVU.includes(n)
+    }));
+  } else {
+    todos = [
+      ...baseNomes.map(n => ({ nome: n, _base: true })),
+      ...addNomes.map(n  => ({ nome: n, _base: false }))
+    ];
+  }
+
+  // Lista completa visível (sem removidas) para calcular posição
+  const todosVisiveis = todos.filter(item => !removidos.has(item.nome));
 
   let html = '<div class="secao-grupo">';
-  todos.forEach((item, idx) => {
+  todos.forEach((item) => {
     const nome = item.nome;
     const isRemovida = removidos.has(nome);
     const isNova = !item._base;
+    // posição dentro da lista visível completa (para habilitar/desabilitar ↑↓)
+    const posVisivel = todosVisiveis.findIndex(x => x.nome === nome);
+    const totalVisiveis = todosVisiveis.length;
+
     html += `<div class="rotina-linha${isRemovida ? ' removida' : ''}${isNova ? ' adicionada' : ''}">
       <div class="rotina-info">
         <div class="rotina-nome">
@@ -440,12 +486,18 @@ function renderCorvu() {
           ${isRemovida ? '<span class="badge-removida">REMOVIDA</span>' : ''}
         </div>
       </div>
-      ${isRemovida
-        ? `<button class="btn-remove" onclick="restaurarCorvu('corvu','${escStr(nome)}')">↩ Restaurar</button>`
-        : isNova
-          ? `<button class="btn-remove" onclick="removerAdicionadaCorvu('corvu','${escStr(nome)}')">🗑 Remover</button>`
-          : `<button class="btn-remove" onclick="removerCorvu('corvu','${escStr(nome)}')">🗑 Remover</button>`
-      }
+      <div class="rotina-btns">
+        ${!isRemovida ? `
+          <button class="btn-mover" title="Mover para cima" ${posVisivel === 0 ? 'disabled' : ''} onclick="moverCorvuGlobal('corvu','${escStr(nome)}',-1)">↑</button>
+          <button class="btn-mover" title="Mover para baixo" ${posVisivel === totalVisiveis - 1 ? 'disabled' : ''} onclick="moverCorvuGlobal('corvu','${escStr(nome)}',1)">↓</button>
+        ` : ''}
+        ${isRemovida
+          ? `<button class="btn-remove" onclick="restaurarCorvu('corvu','${escStr(nome)}')">↩ Restaurar</button>`
+          : isNova
+            ? `<button class="btn-remove" onclick="removerAdicionadaCorvu('corvu','${escStr(nome)}')">🗑 Remover</button>`
+            : `<button class="btn-remove" onclick="removerCorvu('corvu','${escStr(nome)}')">🗑 Remover</button>`
+        }
+      </div>
     </div>`;
   });
   html += '</div>';
@@ -474,6 +526,7 @@ function renderFds() {
     itens.forEach(r => {
       const isRemovida = removidos.has(r.id);
       const isNova = !r._base;
+      const idxAdd = isNova ? adicionados.findIndex(x => x.id === r.id) : -1;
       html += `<div class="rotina-linha${isRemovida ? ' removida' : ''}${isNova ? ' adicionada' : ''}">
         <div class="rotina-info">
           <div class="rotina-nome">
@@ -484,12 +537,18 @@ function renderFds() {
           </div>
           ${r.obs ? `<div class="rotina-detalhe">${r.obs}</div>` : ''}
         </div>
-        ${isRemovida
-          ? `<button class="btn-remove" onclick="restaurar('fds','${escId(r.id)}')">↩ Restaurar</button>`
-          : isNova
-            ? `<button class="btn-remove" onclick="removerAdicionada('fds','${escId(r.id)}')">🗑 Remover</button>`
-            : `<button class="btn-remove" onclick="remover('fds','${escId(r.id)}')">🗑 Remover</button>`
-        }
+        <div class="rotina-btns">
+          ${isNova ? `
+            <button class="btn-mover" title="Mover para cima" ${idxAdd === 0 ? 'disabled' : ''} onclick="moverAdicionada('fds',${idxAdd},-1)">↑</button>
+            <button class="btn-mover" title="Mover para baixo" ${idxAdd === adicionados.length - 1 ? 'disabled' : ''} onclick="moverAdicionada('fds',${idxAdd},1)">↓</button>
+          ` : ''}
+          ${isRemovida
+            ? `<button class="btn-remove" onclick="restaurar('fds','${escId(r.id)}')">↩ Restaurar</button>`
+            : isNova
+              ? `<button class="btn-remove" onclick="removerAdicionada('fds','${escId(r.id)}')">🗑 Remover</button>`
+              : `<button class="btn-remove" onclick="remover('fds','${escId(r.id)}')">🗑 Remover</button>`
+          }
+        </div>
       </div>`;
     });
     html += '</div>';
@@ -519,6 +578,7 @@ function renderMensal() {
     itens.forEach(r => {
       const isRemovida = removidos.has(r.id);
       const isNova = !r._base;
+      const idxAdd = isNova ? adicionados.findIndex(x => x.id === r.id) : -1;
       html += `<div class="rotina-linha${isRemovida ? ' removida' : ''}${isNova ? ' adicionada' : ''}">
         <div class="rotina-info">
           <div class="rotina-nome">
@@ -529,12 +589,18 @@ function renderMensal() {
           </div>
           ${r.obs ? `<div class="rotina-detalhe">${r.obs}</div>` : ''}
         </div>
-        ${isRemovida
-          ? `<button class="btn-remove" onclick="restaurar('mensal','${escId(r.id)}')">↩ Restaurar</button>`
-          : isNova
-            ? `<button class="btn-remove" onclick="removerAdicionada('mensal','${escId(r.id)}')">🗑 Remover</button>`
-            : `<button class="btn-remove" onclick="remover('mensal','${escId(r.id)}')">🗑 Remover</button>`
-        }
+        <div class="rotina-btns">
+          ${isNova ? `
+            <button class="btn-mover" title="Mover para cima" ${idxAdd === 0 ? 'disabled' : ''} onclick="moverAdicionada('mensal',${idxAdd},-1)">↑</button>
+            <button class="btn-mover" title="Mover para baixo" ${idxAdd === adicionados.length - 1 ? 'disabled' : ''} onclick="moverAdicionada('mensal',${idxAdd},1)">↓</button>
+          ` : ''}
+          ${isRemovida
+            ? `<button class="btn-remove" onclick="restaurar('mensal','${escId(r.id)}')">↩ Restaurar</button>`
+            : isNova
+              ? `<button class="btn-remove" onclick="removerAdicionada('mensal','${escId(r.id)}')">🗑 Remover</button>`
+              : `<button class="btn-remove" onclick="remover('mensal','${escId(r.id)}')">🗑 Remover</button>`
+          }
+        </div>
       </div>`;
     });
     html += '</div>';
@@ -545,13 +611,53 @@ function renderMensal() {
 function renderCrvmensal() {
   const removidos = new Set(custom.removidos_crvmensal);
   const adicionados = custom.adicionados_crvmensal || [];
-  const todos = [...ROTINAS_CORVU_MENSAL.map(r => ({ ...r, _base: true })),
-                 ...adicionados.map(r => ({ ...r, _base: false }))];
+
+  // Mapa nome → objeto completo (para recuperar obs)
+  const mapaBase = {};
+  ROTINAS_CORVU_MENSAL.forEach(r => { mapaBase[r.nome] = r; });
+  const mapaAdd = {};
+  adicionados.forEach(r => { mapaAdd[r.nome || r] = r; });
+
+  const baseNomes = ROTINAS_CORVU_MENSAL.map(r => r.nome).filter(n => !removidos.has(n));
+  const addNomes  = adicionados.map(r => r.nome || r).filter(n => !removidos.has(n));
+
+  // Ordem global para crvmensal
+  let ordemSalva = custom.ordem_crvmensal || null;
+  let todosNomes;
+  if (ordemSalva && ordemSalva.length > 0) {
+    const setValidos = new Set([...baseNomes, ...addNomes]);
+    const ordemFiltrada = ordemSalva.filter(n => setValidos.has(n));
+    const naOrdem = new Set(ordemFiltrada);
+    const sobras = addNomes.filter(n => !naOrdem.has(n));
+    todosNomes = [...ordemFiltrada, ...sobras];
+  } else {
+    todosNomes = [...baseNomes, ...addNomes];
+  }
+
+  // Reconstrói array de objetos na ordem correta, incluindo removidas no final
+  const removidasNomes = [...removidos];
+  const todosComRemovidas = [
+    ...todosNomes.map(n => ({
+      nome: n,
+      obs: (mapaBase[n] || mapaAdd[n] || {}).obs || '',
+      _base: !!mapaBase[n]
+    })),
+    ...removidasNomes.map(n => ({
+      nome: n,
+      obs: (mapaBase[n] || mapaAdd[n] || {}).obs || '',
+      _base: !!mapaBase[n]
+    }))
+  ];
+
+  const todosVisiveis = todosNomes; // nomes não removidos, em ordem
 
   let html = '<div class="secao-grupo">';
-  todos.forEach(item => {
+  todosComRemovidas.forEach(item => {
     const isRemovida = removidos.has(item.nome);
     const isNova = !item._base;
+    const posVisivel = isRemovida ? -1 : todosVisiveis.indexOf(item.nome);
+    const totalVisiveis = todosVisiveis.length;
+
     html += `<div class="rotina-linha${isRemovida ? ' removida' : ''}${isNova ? ' adicionada' : ''}">
       <div class="rotina-info">
         <div class="rotina-nome">
@@ -561,12 +667,18 @@ function renderCrvmensal() {
         </div>
         ${item.obs ? `<div class="rotina-detalhe">${item.obs}</div>` : ''}
       </div>
-      ${isRemovida
-        ? `<button class="btn-remove" onclick="restaurarCorvu('crvmensal','${escStr(item.nome)}')">↩ Restaurar</button>`
-        : isNova
-          ? `<button class="btn-remove" onclick="removerAdicionadaCorvu('crvmensal','${escStr(item.nome)}')">🗑 Remover</button>`
-          : `<button class="btn-remove" onclick="removerCorvu('crvmensal','${escStr(item.nome)}')">🗑 Remover</button>`
-      }
+      <div class="rotina-btns">
+        ${!isRemovida ? `
+          <button class="btn-mover" title="Mover para cima" ${posVisivel === 0 ? 'disabled' : ''} onclick="moverCorvuGlobal('crvmensal','${escStr(item.nome)}',-1)">↑</button>
+          <button class="btn-mover" title="Mover para baixo" ${posVisivel === totalVisiveis - 1 ? 'disabled' : ''} onclick="moverCorvuGlobal('crvmensal','${escStr(item.nome)}',1)">↓</button>
+        ` : ''}
+        ${isRemovida
+          ? `<button class="btn-remove" onclick="restaurarCorvu('crvmensal','${escStr(item.nome)}')">↩ Restaurar</button>`
+          : isNova
+            ? `<button class="btn-remove" onclick="removerAdicionadaCorvu('crvmensal','${escStr(item.nome)}')">🗑 Remover</button>`
+            : `<button class="btn-remove" onclick="removerCorvu('crvmensal','${escStr(item.nome)}')">🗑 Remover</button>`
+        }
+      </div>
     </div>`;
   });
   html += '</div>';
@@ -592,7 +704,6 @@ function adicionarRotina(tipo) {
       secao:  document.getElementById('d-secao').value,
     };
     custom.adicionados_diaria = [...(custom.adicionados_diaria || []), item];
-    // Limpa campos
     ['d-hora','d-texto','d-obs','d-caminho'].forEach(id => document.getElementById(id).value = '');
 
   } else if (tipo === 'corvu') {
@@ -640,6 +751,67 @@ function adicionarRotina(tipo) {
     document.getElementById('cm-obs').value = '';
   }
 
+  renderTodas();
+  mostrarMsg('✅ Rotina adicionada! Clique em Salvar para confirmar.', 'ok');
+}
+
+// ── MOVER ROTINAS ADICIONADAS ─────────────────────────────────────────
+// dir: -1 = para cima, +1 = para baixo
+function moverAdicionada(lista, idx, dir) {
+  const key = 'adicionados_' + lista;
+  const arr = [...(custom[key] || [])];
+  const novoIdx = idx + dir;
+  if (novoIdx < 0 || novoIdx >= arr.length) return;
+  // Troca as posições
+  [arr[idx], arr[novoIdx]] = [arr[novoIdx], arr[idx]];
+  custom[key] = arr;
+  renderTodas();
+}
+
+function moverAdicionadaCorvu(lista, idx, dir) {
+  const key = 'adicionados_' + lista;
+  const arr = [...(custom[key] || [])];
+  const novoIdx = idx + dir;
+  if (novoIdx < 0 || novoIdx >= arr.length) return;
+  [arr[idx], arr[novoIdx]] = [arr[novoIdx], arr[idx]];
+  custom[key] = arr;
+  renderTodas();
+}
+
+// Move qualquer item (base ou adicionado) na lista global do Corvu/CrvMensal
+// Salva a ordem completa em custom.ordem_<lista>
+function moverCorvuGlobal(lista, nome, dir) {
+  const removidos = new Set(custom['removidos_' + lista] || []);
+  const adicionados = custom['adicionados_' + lista] || [];
+  const ordemKey = 'ordem_' + lista;
+
+  // Monta a lista visível atual na mesma lógica do render
+  const baseNomes = (lista === 'corvu' ? ROTINAS_CORVU : ROTINAS_CORVU_MENSAL.map(r => r.nome))
+    .filter(n => !removidos.has(n));
+  const addNomes = adicionados.map(r => r.nome || r).filter(n => !removidos.has(n));
+
+  let ordemAtual;
+  const ordemSalva = custom[ordemKey] || null;
+  if (ordemSalva && ordemSalva.length > 0) {
+    const setValidos = new Set([...baseNomes, ...addNomes]);
+    const filtrada = ordemSalva.filter(n => setValidos.has(n));
+    const naOrdem = new Set(filtrada);
+    const sobras = addNomes.filter(n => !naOrdem.has(n));
+    ordemAtual = [...filtrada, ...sobras];
+  } else {
+    ordemAtual = [...baseNomes, ...addNomes];
+  }
+
+  const pos = ordemAtual.indexOf(nome);
+  if (pos === -1) return;
+  const novaPos = pos + dir;
+  if (novaPos < 0 || novaPos >= ordemAtual.length) return;
+
+  // Troca
+  [ordemAtual[pos], ordemAtual[novaPos]] = [ordemAtual[novaPos], ordemAtual[pos]];
+
+  // Salva a nova ordem (inclui base + adicionados, todos os visíveis)
+  custom[ordemKey] = ordemAtual;
   renderTodas();
 }
 
@@ -710,7 +882,7 @@ async function salvarTudo() {
     });
     const data = await r.json();
     if (r.ok) {
-      mostrarMsg('✅ Alterações salvas com sucesso! Serão aplicadas ao recarregar o dashboard.', 'ok');
+      mostrarMsg('✅ Alterações Salvas! Serão aplicadas ao recarregar o dashboard.', 'ok');
     } else {
       mostrarMsg('Erro ao salvar: ' + (data.erro || 'falha'), 'err');
     }

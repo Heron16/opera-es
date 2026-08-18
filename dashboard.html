@@ -159,6 +159,9 @@ function getFdsAnterioresComPendentes() {
       sab.setDate(sab.getDate() - diasAtras);
       const fdsKey = `${sab.getFullYear()}-${String(sab.getMonth()+1).padStart(2,'0')}-${String(sab.getDate()).padStart(2,'0')}`;
 
+      // Se o operador fechou manualmente esta aba, pula
+      if (_abasFechadas.has('fds:' + fdsKey)) continue;
+
       const sStatus = getStatus('fds', fdsKey);
       const temStatus = Object.values(sStatus).some(v => v && v.status);
       if (!temStatus) break;
@@ -190,7 +193,6 @@ function getFdsAnterioresComPendentes() {
 function getDiasAnterioresComPendentes() {
   const dias = [];
   let chave = diaAtual;
-
   // IDs das rotinas de madrugada (seções que pertencem ao dia anterior)
   const idsMadrugada = new Set(
     _rotinasDiaria
@@ -200,6 +202,8 @@ function getDiasAnterioresComPendentes() {
 
   for (let i = 0; i < 3; i++) {
     chave = getDiaAnteriorKey(chave);
+    // Se o operador fechou manualmente esta aba, pula
+    if (_abasFechadas.has('dia:' + chave)) continue;
     const sRotinas = getStatus('diario', chave);
     const sCorvu = getCorvuDadosDia(chave);
 
@@ -211,28 +215,37 @@ function getDiasAnterioresComPendentes() {
 
     if (i === 0) {
       // Dia imediatamente anterior:
-      // Verifica se ainda há rotinas de madrugada pendentes (sem status ou sem horário final)
       const madrugadaIds = [...idsMadrugada];
-      const todasEncerradasComFim = madrugadaIds.every(id => {
-        const v = sRotinas[id];
-        return v && v.status === 'encerrado' && v.fim && v.fim.trim() !== '';
-      });
-      const algumaMadrugadaIniciada = madrugadaIds.some(id => {
-        return sRotinas[id] && sRotinas[id].status;
-      });
+      const algumaMadrugadaIniciada = madrugadaIds.some(id => sRotinas[id] && sRotinas[id].status);
+      // Rotinas de madrugada que foram efetivamente executadas (têm status)
+      const madrugadaExecutadas = madrugadaIds.filter(id => sRotinas[id] && sRotinas[id].status);
+      // Todas as executadas estão encerradas com horário de fim?
+      const todasExecutadasComFim = madrugadaExecutadas.length > 0 &&
+        madrugadaExecutadas.every(id => {
+          const v = sRotinas[id];
+          return v && v.status === 'encerrado' && v.fim && v.fim.trim() !== '';
+        });
 
-      // Corvu: calcula se passou 1h30 desde o último fim registrado
       const DELAY_MS = 1.5 * 60 * 60 * 1000; // 1h30 em ms
       const agora = new Date();
 
-      // Delay das rotinas de madrugada
+      // Delay das rotinas de madrugada:
+      // Começa a contar 1h30 a partir do fim mais tardio das rotinas executadas.
+      // Rotinas que o operador não executou são ignoradas.
       let deveSuprimirPorDelay = false;
-      if (todasEncerradasComFim && algumaMadrugadaIniciada) {
+      if (todasExecutadasComFim) {
         let fimMaisTardio = null;
-        madrugadaIds.forEach(id => {
+        madrugadaExecutadas.forEach(id => {
           const v = sRotinas[id];
           if (v && v.fim) {
-            const dtFim = new Date(`${diaAtual}T${v.fim}:00`);
+            // Rotinas "Após meia-noite" e "Após 03:00h" são executadas nas primeiras
+            // horas do dia atual (após a virada), então usa diaAtual como base.
+            // Fallback para chave se o horário ficar no futuro (registrado antes da virada).
+            let dtFim = new Date(`${diaAtual}T${v.fim}:00`);
+            if (dtFim > agora) {
+              const dtFimAnterior = new Date(`${chave}T${v.fim}:00`);
+              if (dtFimAnterior <= agora) dtFim = dtFimAnterior;
+            }
             if (!fimMaisTardio || dtFim > fimMaisTardio) fimMaisTardio = dtFim;
           }
         });
@@ -254,7 +267,13 @@ function getDiasAnterioresComPendentes() {
           let fimCorvu = null;
           corvuVals.forEach(v => {
             if (v && v.fim) {
-              const dtFim = new Date(`${diaAtual}T${v.fim}:00`);
+              // Mesmo critério das rotinas de madrugada: tenta diaAtual primeiro,
+              // se ficar no futuro usa chave (dia anterior)
+              let dtFim = new Date(`${diaAtual}T${v.fim}:00`);
+              if (dtFim > agora) {
+                const dtFimAnterior = new Date(`${chave}T${v.fim}:00`);
+                if (dtFimAnterior <= agora) dtFim = dtFimAnterior;
+              }
               if (!fimCorvu || dtFim > fimCorvu) fimCorvu = dtFim;
             }
           });
@@ -264,12 +283,14 @@ function getDiasAnterioresComPendentes() {
         }
       }
 
-      const temMadrugadaPendente = algumaMadrugadaIniciada && !todasEncerradasComFim;
+      const temMadrugadaPendente = algumaMadrugadaIniciada && !todasExecutadasComFim;
       const madrugadaSemIniciar = !algumaMadrugadaIniciada;
       const corvuAtivo = temCorvu && !deveSuprimirCorvu;
 
       // Aba some só quando: delay das rotinas passou E delay do corvu passou (ou não tem corvu)
-      if (!deveSuprimirPorDelay && (temMadrugadaPendente || madrugadaSemIniciar || temRotinasComStatus || corvuAtivo)) {
+      // madrugadaSemIniciar: nenhuma rotina de madrugada foi executada — a aba ainda deve
+      // aparecer se houver outros dados do dia (rotinas noturnas com status ou corvu ativo).
+      if (!deveSuprimirPorDelay && (temMadrugadaPendente || (madrugadaSemIniciar && (temRotinasComStatus || corvuAtivo)) || temRotinasComStatus || corvuAtivo)) {
         dias.push({ diaKey: chave, temRotinas: true, temCorvu: corvuAtivo });
       } else if (deveSuprimirPorDelay && (temRotinasComStatus || corvuAtivo)) {
         dias.push({ diaKey: chave, temRotinas: temRotinasComStatus, temCorvu: corvuAtivo });
@@ -353,8 +374,11 @@ function renderTabBar() {
     const label = `${ad}/${am}`;
     const idR = 'tab-diario-' + diaKey;
     const idC = 'tab-corvu-'  + diaKey;
-    html += `<button class="tab-btn tab-btn-anterior${abaAtiva===idR?' active':''}" onclick="abrirTab('${idR}')">⚠️ Diário ${label}</button>`;
-    html += `<button class="tab-btn tab-btn-anterior${abaAtiva===idC?' active':''}" onclick="abrirTab('${idC}')">⚠️ Corvu ${label}</button>`;
+    html += `<span class="tab-anterior-grupo">
+      <button class="tab-btn tab-btn-anterior${abaAtiva===idR?' active':''}" onclick="abrirTab('${idR}')">⚠️ Diário ${label}</button>
+      <button class="tab-btn tab-btn-anterior${abaAtiva===idC?' active':''}" onclick="abrirTab('${idC}')">⚠️ Corvu ${label}</button>
+      <button class="tab-btn-fechar" title="Fechar abas do dia ${label}" onclick="fecharAbaDiaAnterior('${diaKey}')">✕</button>
+    </span>`;
   });
 
   // Abas do FDS anterior
@@ -362,7 +386,10 @@ function renderTabBar() {
     const [,fm,fd] = fdsKey.split('-');
     const label = `${fd}/${fm}`;
     const idF = 'tab-fds-' + fdsKey;
-    html += `<button class="tab-btn tab-btn-anterior${abaAtiva===idF?' active':''}" onclick="abrirTab('${idF}')">⚠️ FDS ${label}</button>`;
+    html += `<span class="tab-anterior-grupo">
+      <button class="tab-btn tab-btn-anterior${abaAtiva===idF?' active':''}" onclick="abrirTab('${idF}')">⚠️ FDS ${label}</button>
+      <button class="tab-btn-fechar" title="Fechar aba FDS ${label}" onclick="fecharAbaFds('${fdsKey}')">✕</button>
+    </span>`;
   });
 
   // Abas fixas normais
@@ -523,6 +550,26 @@ function getMovimentoHeaderAnual(diaKey) {
 function horaAtual() { const n=new Date(); return n.getHours()*60+n.getMinutes(); }
 function horaParaMin(h) { if(!h||!h.match(/^\d{2}:\d{2}/))return -1; const[hh,mm]=h.split(':'); return parseInt(hh)*60+parseInt(mm); }
 let diaAtual = getDiaKey();
+
+// Abas do dia anterior/FDS fechadas manualmente pelo operador (só dura até recarregar a página)
+const _abasFechadas = new Set();
+
+function fecharAbaDiaAnterior(diaKey) {
+  _abasFechadas.add('dia:' + diaKey);
+  // Se a aba fechada estava ativa, volta para o Diário do dia atual
+  if (abaAtiva === 'tab-diario-' + diaKey || abaAtiva === 'tab-corvu-' + diaKey) {
+    abaAtiva = 'diario';
+  }
+  renderTabBar(); renderAll();
+}
+
+function fecharAbaFds(fdsKey) {
+  _abasFechadas.add('fds:' + fdsKey);
+  if (abaAtiva === 'tab-fds-' + fdsKey) {
+    abaAtiva = 'diario';
+  }
+  renderTabBar(); renderAll();
+}
 
 // ── STORAGE (API servidor + localStorage fallback) ────────────────────
 // Sempre usa API (o site roda no servidor)
@@ -1224,6 +1271,29 @@ async function carregarRotinasCustum() {
     if (custom.adicionados_mensal   ?.length) _rotinasMensal    = [..._rotinasMensal,    ...custom.adicionados_mensal];
     if (custom.adicionados_corvu    ?.length) _rotinasCorvu     = [..._rotinasCorvu,     ...custom.adicionados_corvu];
     if (custom.adicionados_crvmensal?.length) _rotinasCrvMensal = [..._rotinasCrvMensal, ...custom.adicionados_crvmensal];
+
+    // Aplica ordem global do Corvu Diário (se salva no gerenciador)
+    if (custom.ordem_corvu?.length) {
+      const ordemMap = new Map();
+      custom.ordem_corvu.forEach((nome, i) => ordemMap.set(nome, i));
+      // Itens sem posição na ordem vão para o final
+      _rotinasCorvu = [..._rotinasCorvu].sort((a, b) => {
+        const ia = ordemMap.has(a) ? ordemMap.get(a) : Infinity;
+        const ib = ordemMap.has(b) ? ordemMap.get(b) : Infinity;
+        return ia - ib;
+      });
+    }
+
+    // Aplica ordem global do Corvu Mensal (se salva no gerenciador)
+    if (custom.ordem_crvmensal?.length) {
+      const ordemMap = new Map();
+      custom.ordem_crvmensal.forEach((nome, i) => ordemMap.set(nome, i));
+      _rotinasCrvMensal = [..._rotinasCrvMensal].sort((a, b) => {
+        const ia = ordemMap.has(a.nome) ? ordemMap.get(a.nome) : Infinity;
+        const ib = ordemMap.has(b.nome) ? ordemMap.get(b.nome) : Infinity;
+        return ia - ib;
+      });
+    }
   } catch { /* se falhar, usa os arrays base sem alteração */ }
 }
 

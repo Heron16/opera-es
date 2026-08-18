@@ -87,6 +87,27 @@ header h1 { font-size: 1.1rem; color: #58a6ff; font-weight: 600; letter-spacing:
   background: #0d1117; color: #ffa657;
   border-color: rgba(255,166,87,0.4); border-bottom-color: #0d1117;
 }
+.tab-anterior-grupo {
+  display: inline-flex; align-items: center; gap: 0;
+}
+.tab-anterior-grupo .tab-btn {
+  border-radius: 5px 0 0 5px;
+  margin-right: 0;
+}
+.tab-anterior-grupo .tab-btn + .tab-btn {
+  border-radius: 0;
+  border-left: none;
+}
+.tab-btn-fechar {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 28px; width: 22px;
+  background: transparent; border: 1px solid rgba(255,166,87,0.3);
+  border-left: none; border-radius: 0 5px 5px 0;
+  color: #ffa657; font-size: 0.75rem; cursor: pointer;
+  margin-right: 6px; transition: background 0.15s;
+  position: relative; top: -1px;
+}
+.tab-btn-fechar:hover { background: rgba(248,81,73,0.2); color: #f85149; border-color: rgba(248,81,73,0.4); }
 
 /* ── CONTENT ── */
 .tab-content { display: none; padding: 20px 24px; }
