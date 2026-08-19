@@ -203,7 +203,7 @@ function getDiasAnterioresComPendentes() {
   for (let i = 0; i < 3; i++) {
     chave = getDiaAnteriorKey(chave);
     // Se o operador fechou manualmente esta aba, pula
-    if (_abasFechadas.has('dia:' + chave)) continue;
+    if (_abaEstahFechada('dia:' + chave)) continue;
     const sRotinas = getStatus('diario', chave);
     const sCorvu = getCorvuDadosDia(chave);
 
