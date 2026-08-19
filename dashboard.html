@@ -6,7 +6,7 @@
   <title>Operações – Coamo</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    /* ── PRINT / PDF ── */
+    /* -- PRINT / PDF -- */
     @media print {
       header, .tabs, .btn-exportar, .btn-block, .btn-logout, .btn-gerenciar,
       .rotina-actions select, .rotina-actions button,
@@ -70,12 +70,12 @@
 </head>
 <body>
 <header>
-  <h1>⚙️ Sistema de Operações – Coamo</h1>
+  <h1>?? Sistema de Operações – Coamo</h1>
   <div class="header-right">
     <span id="relogioHeader"></span>
     <span class="user-badge" id="userBadge"></span>
-    <button class="btn-exportar" onclick="exportarPDF()" title="Exportar PDF">🖨️ Exportar PDF</button>
-    <button class="btn-gerenciar" id="btnGerenciar" onclick="window.location.href='gerenciar-rotinas.html'" title="Gerenciar rotinas" style="display:none">⚙️ Rotinas</button>
+    <button class="btn-exportar" onclick="exportarPDF()" title="Exportar PDF">??? Exportar PDF</button>
+    <button class="btn-gerenciar" id="btnGerenciar" onclick="window.location.href='gerenciar-rotinas.html'" title="Gerenciar rotinas" style="display:none">?? Rotinas</button>
     <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
 </header>
@@ -91,14 +91,14 @@
 
 <script src="data.js"></script>
 <script>
-// ── AUTH ─────────────────────────────────────────────────────────────
+// -- AUTH -------------------------------------------------------------
 const user  = sessionStorage.getItem('user');
 const role  = sessionStorage.getItem('role');
 const token = sessionStorage.getItem('token');
 if (!user || !token || !['operador','admin'].includes(role)) {
   sessionStorage.clear(); window.location.href = 'index.html';
 }
-document.getElementById('userBadge').textContent = '👤 ' + user + ' (' + role + ')';
+document.getElementById('userBadge').textContent = '?? ' + user + ' (' + role + ')';
 function logout() { sessionStorage.clear(); window.location.href = 'index.html'; }
 
 // Mostra botão de gerenciar rotinas só para admin
@@ -113,7 +113,7 @@ function authHeaders() {
   return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
 }
 
-// ── PROTEÇÃO BÁSICA DE INSPEÇÃO ───────────────────────────────────────
+// -- PROTEÇÃO BÁSICA DE INSPEÇÃO ---------------------------------------
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('keydown', e => {
   if (e.key === 'F12') { e.preventDefault(); return false; }
@@ -121,25 +121,25 @@ document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.key.toUpperCase() === 'U') { e.preventDefault(); return false; }
 });
 
-// ── ABAS ──────────────────────────────────────────────────────────────
+// -- ABAS --------------------------------------------------------------
 const TABS = [
-  { id:'diario',      label:'📋 Diário'          },
-  { id:'corvudiario', label:'🖥️ Corvu Diário'    },
-  { id:'fds',         label:'📆 Final de Semana' },
-  { id:'mensal',      label:'📅 Mensal'           },
-  { id:'corvumensal', label:'🖥️ Corvu Mensal'    },
-  { id:'anual',       label:'📆 Anual'            },
+  { id:'diario',      label:'?? Diário'          },
+  { id:'corvudiario', label:'??? Corvu Diário'    },
+  { id:'fds',         label:'?? Final de Semana' },
+  { id:'mensal',      label:'?? Mensal'           },
+  { id:'corvumensal', label:'??? Corvu Mensal'    },
+  { id:'anual',       label:'?? Anual'            },
 ];
 let abaAtiva = 'diario';
 
-// ── ABAS DINÂMICAS DO DIA ANTERIOR ───────────────────────────────────
+// -- ABAS DINÂMICAS DO DIA ANTERIOR -----------------------------------
 // Verifica se há rotinas ou corvus do dia anterior com status registrado
 // e cria/remove abas dinâmicas conforme necessário
 
 // Seções que pertencem ao dia anterior (madrugada executada após virar o dia)
 const SECOES_DIA_ANTERIOR = new Set(['Após meia-noite','Após 03:00h','Acompanhamento BI']);
 
-// ── FDS DINÂMICO POR DATA ─────────────────────────────────────────────
+// -- FDS DINÂMICO POR DATA ---------------------------------------------
 function getFdsAnterioresComPendentes() {
   try {
     const DELAY_MS = 15 * 60 * 1000; // 15 minutos em ms
@@ -200,6 +200,90 @@ function getDiasAnterioresComPendentes() {
       .map(r => r.id)
   );
 
+  // Função auxiliar: calcula se um dia já deve ser suprimido pelo delay de 15 min.
+  // Regras:
+  //   1. Todas as rotinas COM status precisam estar encerradas E com fim preenchido.
+  //   2. Se houver ALGUMA rotina com status !== 'encerrado' ou sem fim ? delay não começa ? não suprime.
+  //   3. Rotinas SEM qualquer status são ignoradas (não foram executadas).
+  //   4. Se todas as rotinas com status estão ok E o Corvu (quando presente) também está ok,
+  //      e já passaram 15 min do último fim ? suprime.
+  function _calcularSupressao(sRotinas, sCorvu, chaveBase, isDiaImediato) {
+    const DELAY_MS = 15 * 60 * 1000;
+    const agora = new Date();
+
+    // -- Rotinas ------------------------------------------------------
+    const todasRotinasExecutadas = Object.keys(sRotinas).filter(id => sRotinas[id] && sRotinas[id].status);
+
+    // BUG FIX 1: a aba só pode sumir se TODAS as rotinas com status estiverem
+    // encerradas E com horário de fim preenchido. Qualquer rotina "executando"
+    // ou sem fim impede a contagem do delay.
+    const todasRotinasComFim = todasRotinasExecutadas.length > 0 &&
+      todasRotinasExecutadas.every(id => {
+        const v = sRotinas[id];
+        return v && v.status === 'encerrado' && v.fim && v.fim.trim() !== '';
+      });
+
+    let deveSuprimirPorDelay = false;
+    if (todasRotinasComFim) {
+      let fimMaisTardio = null;
+      todasRotinasExecutadas.forEach(id => {
+        const v = sRotinas[id];
+        if (v && v.fim) {
+          // Para o dia imediato anterior, rotinas de madrugada são executadas nas
+          // primeiras horas do dia atual — tenta diaAtual como base e faz fallback.
+          // Para dias mais antigos, usa sempre a chave do próprio dia.
+          let dtFim;
+          if (isDiaImediato) {
+            dtFim = new Date(`${diaAtual}T${v.fim}:00`);
+            if (dtFim > agora) {
+              const dtFimAnterior = new Date(`${chaveBase}T${v.fim}:00`);
+              if (dtFimAnterior <= agora) dtFim = dtFimAnterior;
+            }
+          } else {
+            dtFim = new Date(`${chaveBase}T${v.fim}:00`);
+          }
+          if (!fimMaisTardio || dtFim > fimMaisTardio) fimMaisTardio = dtFim;
+        }
+      });
+      if (fimMaisTardio) {
+        deveSuprimirPorDelay = (agora - fimMaisTardio) >= DELAY_MS;
+      }
+    }
+
+    // -- Corvu ---------------------------------------------------------
+    const temCorvu = Object.values(sCorvu).some(v => v && v.inicio);
+    let deveSuprimirCorvu = false;
+    if (temCorvu) {
+      const corvuVals = Object.values(sCorvu);
+      const todasCorvuComFim = corvuVals.filter(v => v && v.inicio)
+        .every(v => v.fim && v.fim.trim() !== '');
+
+      if (todasCorvuComFim) {
+        let fimCorvu = null;
+        corvuVals.forEach(v => {
+          if (v && v.fim) {
+            let dtFim;
+            if (isDiaImediato) {
+              dtFim = new Date(`${diaAtual}T${v.fim}:00`);
+              if (dtFim > agora) {
+                const dtFimAnterior = new Date(`${chaveBase}T${v.fim}:00`);
+                if (dtFimAnterior <= agora) dtFim = dtFimAnterior;
+              }
+            } else {
+              dtFim = new Date(`${chaveBase}T${v.fim}:00`);
+            }
+            if (!fimCorvu || dtFim > fimCorvu) fimCorvu = dtFim;
+          }
+        });
+        if (fimCorvu) {
+          deveSuprimirCorvu = (agora - fimCorvu) >= DELAY_MS;
+        }
+      }
+    }
+
+    return { deveSuprimirPorDelay, temCorvu, deveSuprimirCorvu };
+  }
+
   for (let i = 0; i < 3; i++) {
     chave = getDiaAnteriorKey(chave);
     // Se o operador fechou manualmente esta aba, pula
@@ -213,98 +297,42 @@ function getDiasAnterioresComPendentes() {
     // Corvu tem dados se alguma linha tem início registrado
     const temCorvu = Object.values(sCorvu).some(v => v && v.inicio);
 
-    if (i === 0) {
-      // Dia imediatamente anterior:
+    if (!temRotinasComStatus && !temCorvu) {
+      // Sem nenhum dado registrado — para de buscar dias anteriores
+      break;
+    }
+
+    const isDiaImediato = (i === 0);
+    const { deveSuprimirPorDelay, deveSuprimirCorvu } = _calcularSupressao(sRotinas, sCorvu, chave, isDiaImediato);
+
+    const corvuAtivo = temCorvu && !deveSuprimirCorvu;
+
+    // BUG FIX 2: aplica a mesma lógica de delay para TODOS os dias anteriores,
+    // não apenas para o dia imediatamente anterior (i === 0).
+    // A aba só some quando o delay das rotinas passou E o corvu (se houver) também passou.
+    if (deveSuprimirPorDelay && !corvuAtivo) {
+      // Delay passou em tudo — não adiciona a aba (ela some)
+      continue;
+    }
+
+    // Para o dia imediato, também verifica madrugada pendente separadamente
+    if (isDiaImediato) {
       const madrugadaIds = [...idsMadrugada];
       const algumaMadrugadaIniciada = madrugadaIds.some(id => sRotinas[id] && sRotinas[id].status);
-      // Rotinas de madrugada que foram efetivamente executadas (têm status)
       const madrugadaExecutadas = madrugadaIds.filter(id => sRotinas[id] && sRotinas[id].status);
-      // Todas as executadas estão encerradas com horário de fim?
       const todasExecutadasComFim = madrugadaExecutadas.length > 0 &&
         madrugadaExecutadas.every(id => {
           const v = sRotinas[id];
           return v && v.status === 'encerrado' && v.fim && v.fim.trim() !== '';
         });
-
-      const DELAY_MS = 15 * 60 * 1000; // 15 minutos em ms
-      const agora = new Date();
-
-      // Delay: considera TODAS as rotinas executadas do dia (madrugada + noturnas + qualquer outra).
-      // Só inicia a contagem quando todas estão encerradas com fim preenchido.
-      // Rotinas que o operador não executou são ignoradas.
-      const todasRotinasExecutadas = Object.keys(sRotinas).filter(id => sRotinas[id] && sRotinas[id].status);
-      const todasRotinasComFim = todasRotinasExecutadas.length > 0 &&
-        todasRotinasExecutadas.every(id => {
-          const v = sRotinas[id];
-          return v && v.status === 'encerrado' && v.fim && v.fim.trim() !== '';
-        });
-
-      let deveSuprimirPorDelay = false;
-      if (todasRotinasComFim) {
-        let fimMaisTardio = null;
-        todasRotinasExecutadas.forEach(id => {
-          const v = sRotinas[id];
-          if (v && v.fim) {
-            // Rotinas de madrugada são executadas nas primeiras horas do dia atual (após a virada),
-            // então tenta diaAtual como base. Fallback para chave se ficar no futuro.
-            let dtFim = new Date(`${diaAtual}T${v.fim}:00`);
-            if (dtFim > agora) {
-              const dtFimAnterior = new Date(`${chave}T${v.fim}:00`);
-              if (dtFimAnterior <= agora) dtFim = dtFimAnterior;
-            }
-            if (!fimMaisTardio || dtFim > fimMaisTardio) fimMaisTardio = dtFim;
-          }
-        });
-        if (fimMaisTardio) {
-          deveSuprimirPorDelay = (agora - fimMaisTardio) >= DELAY_MS;
-        }
-      }
-
-      // Delay do Corvu: só some 15 min após o último fim do Corvu
-      let deveSuprimirCorvu = false;
-      if (temCorvu) {
-        const corvuVals = Object.values(sCorvu);
-        // Verifica se todas as linhas com início também têm fim
-        const todasCorvuComFim = corvuVals.filter(v => v && v.inicio)
-          .every(v => v.fim && v.fim.trim() !== '');
-
-        if (todasCorvuComFim) {
-          // Pega o fim mais tardio do Corvu
-          let fimCorvu = null;
-          corvuVals.forEach(v => {
-            if (v && v.fim) {
-              // Mesmo critério das rotinas de madrugada: tenta diaAtual primeiro,
-              // se ficar no futuro usa chave (dia anterior)
-              let dtFim = new Date(`${diaAtual}T${v.fim}:00`);
-              if (dtFim > agora) {
-                const dtFimAnterior = new Date(`${chave}T${v.fim}:00`);
-                if (dtFimAnterior <= agora) dtFim = dtFimAnterior;
-              }
-              if (!fimCorvu || dtFim > fimCorvu) fimCorvu = dtFim;
-            }
-          });
-          if (fimCorvu) {
-            deveSuprimirCorvu = (agora - fimCorvu) >= DELAY_MS;
-          }
-        }
-      }
-
       const temMadrugadaPendente = algumaMadrugadaIniciada && !todasExecutadasComFim;
       const madrugadaSemIniciar = !algumaMadrugadaIniciada;
-      const corvuAtivo = temCorvu && !deveSuprimirCorvu;
 
-      // Aba some quando: delay passou para todas as rotinas E delay do corvu passou (ou não tem corvu)
-      // Se nenhuma rotina foi iniciada mas há corvu ativo, a aba continua aparecendo.
-      if (deveSuprimirPorDelay && !corvuAtivo) {
-        // Delay passou em tudo — não adiciona a aba (ela some)
-      } else if (temRotinasComStatus || temMadrugadaPendente || (madrugadaSemIniciar && (temRotinasComStatus || corvuAtivo)) || corvuAtivo) {
+      if (temRotinasComStatus || temMadrugadaPendente || (madrugadaSemIniciar && corvuAtivo) || corvuAtivo) {
         dias.push({ diaKey: chave, temRotinas: temRotinasComStatus, temCorvu: corvuAtivo });
       }
     } else {
-      // Dias anteriores mais antigos: só aparecem se tiverem dados
-      if (temRotinasComStatus || temCorvu) {
-        dias.push({ diaKey: chave, temRotinas: temRotinasComStatus, temCorvu });
-      } else break;
+      dias.push({ diaKey: chave, temRotinas: temRotinasComStatus, temCorvu: corvuAtivo });
     }
   }
   return dias;
@@ -380,8 +408,8 @@ function renderTabBar() {
     const idR = 'tab-diario-' + diaKey;
     const idC = 'tab-corvu-'  + diaKey;
     html += `<span class="tab-anterior-grupo">
-      <button class="tab-btn tab-btn-anterior${abaAtiva===idR?' active':''}" onclick="abrirTab('${idR}')">⚠️ Diário ${label}</button>
-      <button class="tab-btn tab-btn-anterior${abaAtiva===idC?' active':''}" onclick="abrirTab('${idC}')">⚠️ Corvu ${label}</button>
+      <button class="tab-btn tab-btn-anterior${abaAtiva===idR?' active':''}" onclick="abrirTab('${idR}')">?? Diário ${label}</button>
+      <button class="tab-btn tab-btn-anterior${abaAtiva===idC?' active':''}" onclick="abrirTab('${idC}')">?? Corvu ${label}</button>
     </span>`;
   });
 
@@ -391,7 +419,7 @@ function renderTabBar() {
     const label = `${fd}/${fm}`;
     const idF = 'tab-fds-' + fdsKey;
     html += `<span class="tab-anterior-grupo">
-      <button class="tab-btn tab-btn-anterior${abaAtiva===idF?' active':''}" onclick="abrirTab('${idF}')">⚠️ FDS ${label}</button>
+      <button class="tab-btn tab-btn-anterior${abaAtiva===idF?' active':''}" onclick="abrirTab('${idF}')">?? FDS ${label}</button>
     </span>`;
   });
 
@@ -399,7 +427,7 @@ function renderTabBar() {
   TABS.forEach(t => {
     html += `<button class="tab-btn${abaAtiva===t.id?' active':''}" onclick="abrirTab('${t.id}')">${t.label}</button>`;
   });
-  html += `<button class="tab-btn" onclick="window.location.href='horarios.html'">🗓️ Horários</button>`;
+  html += `<button class="tab-btn" onclick="window.location.href='horarios.html'">??? Horários</button>`;
 
   document.getElementById('tabBar').innerHTML = html;
 }
@@ -414,7 +442,7 @@ function abrirTab(id) {
   renderTabBar(); renderAll();
 }
 
-// ── RENDER ALL ────────────────────────────────────────────────────────
+// -- RENDER ALL --------------------------------------------------------
 function renderAll() {
   const a = abaAtiva;
 
@@ -501,7 +529,7 @@ function exportarPDF() {
   }, 1500);
 }
 
-// ── DATA / HORA ───────────────────────────────────────────────────────
+// -- DATA / HORA -------------------------------------------------------
 function getDiaKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -521,8 +549,8 @@ function getMovimentoHeaderCorvu(diaKey) {
   return `ROTINAS DO CORVU - MOVIMENTO DO DIA – ${d}/${m}/${y}`;
 }
 // Retorna YYYY-MM do mês de referência do mensal.
-// Regra: dias 1–15 → mês anterior (o mensal ainda está em andamento)
-//        dias 16–fim → mês atual (novo ciclo mensal ainda não começou)
+// Regra: dias 1–15 ? mês anterior (o mensal ainda está em andamento)
+//        dias 16–fim ? mês atual (novo ciclo mensal ainda não começou)
 function getMesReferencia() {
   const hoje = new Date();
   const dia = hoje.getDate();
@@ -555,7 +583,7 @@ function horaParaMin(h) { if(!h||!h.match(/^\d{2}:\d{2}/))return -1; const[hh,mm
 let diaAtual = getDiaKey();
 
 // Abas fechadas manualmente — persiste no localStorage com a data de fechamento.
-// Chave: 'abas_fechadas' → objeto { 'dia:YYYY-MM-DD': timestampMs, 'fds:YYYY-MM-DD': timestampMs }
+// Chave: 'abas_fechadas' ? objeto { 'dia:YYYY-MM-DD': timestampMs, 'fds:YYYY-MM-DD': timestampMs }
 // A aba só fica suprimida enquanto não há pendências nela. Se reabrir com pendência nova,
 // o fechamento é ignorado automaticamente.
 const _abasFechadasKey = 'abas_fechadas';
@@ -600,7 +628,7 @@ function fecharAbaFds(fdsKey) {
   renderTabBar(); renderAll();
 }
 
-// ── STORAGE (API servidor + localStorage fallback) ────────────────────
+// -- STORAGE (API servidor + localStorage fallback) --------------------
 // Sempre usa API (o site roda no servidor)
 const USAR_API = location.protocol === 'http:' || location.protocol === 'https:';
 const API_URL       = '/api/dados';
@@ -692,7 +720,7 @@ function atualizarIndicadorPendentes() {
     el.style.display = 'inline';
     el.style.background = '#fff3cd';
     el.style.color = '#856404';
-    el.textContent = '⏳ Salvando...';
+    el.textContent = '? Salvando...';
   } else {
     el.style.display = 'none';
   }
@@ -811,7 +839,7 @@ function atualizarSemPerderFoco() {
   }
 }
 
-// ── Funções de storage que usam a camada unificada ────────────────────
+// -- Funções de storage que usam a camada unificada --------------------
 function getStatusKey(p,dk) {
   if (p==='diario'||p==='fds') return 'status_diaria_'+(dk||diaAtual);
   if (p==='mensal') return 'status_mensal_'+getMesReferencia();
@@ -901,11 +929,11 @@ function getCorvuBlocked(p) {
   try{return JSON.parse(lerChave('blocked_corvu_'+p)||'[]')}catch{return[]}
 }
 
-// ── PERMISSÕES POR PERFIL ─────────────────────────────────────────────
-// admin  → pode editar tudo (rotinas + horários)
-// operador → pode editar rotinas (status, início, fim, campos)
+// -- PERMISSÕES POR PERFIL ---------------------------------------------
+// admin  ? pode editar tudo (rotinas + horários)
+// operador ? pode editar rotinas (status, início, fim, campos)
 
-// ── AÇÕES ─────────────────────────────────────────────────────────────
+// -- AÇÕES -------------------------------------------------------------
 async function mudarStatus(p,id,val,dk) {
   const s=getStatus(p,dk); if(!s[id])s[id]={};
   s[id].status=val;
@@ -1015,7 +1043,7 @@ async function toggleCorvuBlock(p,idx) {
   renderAll();
 }
 
-// ── BUILD ROTINA HTML ─────────────────────────────────────────────────
+// -- BUILD ROTINA HTML -------------------------------------------------
 function buildRotinaHtml(r,p,dk,blocked,status,agora,temHora,badge) {
   const isBlocked=blocked.includes(r.id);
   const info=status[r.id]||{};
@@ -1048,20 +1076,20 @@ function buildRotinaHtml(r,p,dk,blocked,status,agora,temHora,badge) {
     <div style="flex:1;min-width:0;">
       <div class="rotina-text">${r.texto}${badge?`<span class="badge-dia-anterior">Rotinas ${badge}</span>`:''}</div>
       ${r.obs?`<div class="rotina-obs">${r.obs}</div>`:''}
-      ${r.caminho?`<div class="rotina-caminho">📂 ${r.caminho}</div>`:''}
-      ${st==='erro'&&info.msg?`<div class="erro-msg-view">⚠️ ${info.msg}</div>`:''}
-      ${info.chamado&&st!=='erro'?`<div class="erro-msg-view" style="color:#ffb74d;">📋 Chamado: ${info.chamado}</div>`:''}
+      ${r.caminho?`<div class="rotina-caminho">?? ${r.caminho}</div>`:''}
+      ${st==='erro'&&info.msg?`<div class="erro-msg-view">?? ${info.msg}</div>`:''}
+      ${info.chamado&&st!=='erro'?`<div class="erro-msg-view" style="color:#ffb74d;">?? Chamado: ${info.chamado}</div>`:''}
     </div>
     <div class="rotina-actions">
       <div class="rotina-actions-row">
         ${r.semStatus ? '' : `<select class="status-select ${st}" ${isBlocked?'disabled':''} onchange="mudarStatus('${p}','${r.id}',this.value,'${dkk}')">
           <option value="" ${!st?'selected':''}>— Status —</option>
-          <option value="executando" ${st==='executando'?'selected':''}>▶ Executando</option>
-          <option value="encerrado"  ${st==='encerrado'?'selected':''}>✔ Encerrado</option>
-          <option value="erro"       ${st==='erro'?'selected':''}>✖ Erro</option>
+          <option value="executando" ${st==='executando'?'selected':''}>? Executando</option>
+          <option value="encerrado"  ${st==='encerrado'?'selected':''}>? Encerrado</option>
+          <option value="erro"       ${st==='erro'?'selected':''}>? Erro</option>
         </select>`}
         ${r.campo?`<input type="text" class="campo-extra" placeholder="${r.campo}" value="${info.campoval||''}" onblur="mudarCampo('${p}','${r.id}','campoval',this.value,'${dkk}')${r.semStatus?';renderAll()':''}">`:'' }
-        ${!r.campos ? `<button class="btn-block ${isBlocked?'unblock':''}" onclick="toggleBlock('${p}','${r.id}','${dkk}')" title="${isBlocked?'Desbloquear':'Bloquear'}">${isBlocked?'🔓':'🔒'}</button>` : ''}
+        ${!r.campos ? `<button class="btn-block ${isBlocked?'unblock':''}" onclick="toggleBlock('${p}','${r.id}','${dkk}')" title="${isBlocked?'Desbloquear':'Bloquear'}">${isBlocked?'??':'??'}</button>` : ''}
       </div>
       ${r.campos?`<div class="rotina-campos-wrap">
         ${r.campos.slice(0, -1).map(c=>`<div class="campo-label-wrap">
@@ -1071,7 +1099,7 @@ function buildRotinaHtml(r,p,dk,blocked,status,agora,temHora,badge) {
         <div class="rotina-campos-ultima">
           <span class="campo-label">${r.campos[r.campos.length-1].label}:</span>
           <input type="text" class="campo-extra" placeholder="${r.campos[r.campos.length-1].label}" value="${info[r.campos[r.campos.length-1].k]||''}" onblur="mudarCampo('${p}','${r.id}','${r.campos[r.campos.length-1].k}',this.value,'${dkk}')${r.semStatus?';renderAll()':''}">
-          <button class="btn-block ${isBlocked?'unblock':''}" onclick="toggleBlock('${p}','${r.id}','${dkk}')" title="${isBlocked?'Desbloquear':'Bloquear'}">${isBlocked?'🔓':'🔒'}</button>
+          <button class="btn-block ${isBlocked?'unblock':''}" onclick="toggleBlock('${p}','${r.id}','${dkk}')" title="${isBlocked?'Desbloquear':'Bloquear'}">${isBlocked?'??':'??'}</button>
         </div>
       </div>`:''}`;
 
@@ -1092,11 +1120,11 @@ function buildRotinaHtml(r,p,dk,blocked,status,agora,temHora,badge) {
 
   // Mostra o chamado mesmo apos encerrar (somente leitura, se houver chamado salvo)
   if(st==='encerrado' && info.chamado) html+=`
-    <div class="chamado-encerrado">📋 Chamado: <strong>${info.chamado}</strong></div>`;
+    <div class="chamado-encerrado">?? Chamado: <strong>${info.chamado}</strong></div>`;
 
   // Se a rotina continuou após erro (executando) e já tem chamado/obs — mostra em modo leitura
   if(st==='executando' && info.chamado) html+=`
-    <div class="chamado-encerrado" style="color:#ffb74d;background:rgba(255,183,77,0.1);">📋 Chamado aberto: <strong>${info.chamado}</strong>
+    <div class="chamado-encerrado" style="color:#ffb74d;background:rgba(255,183,77,0.1);">?? Chamado aberto: <strong>${info.chamado}</strong>
       ${info.msg ? `<span style="color:#8b949e;font-weight:400;"> — ${info.msg}</span>` : ''}
     </div>`;
 
@@ -1104,7 +1132,7 @@ function buildRotinaHtml(r,p,dk,blocked,status,agora,temHora,badge) {
   return html;
 }
 
-// ── RENDER ROTINAS ────────────────────────────────────────────────────
+// -- RENDER ROTINAS ----------------------------------------------------
 function renderRotinas(tabId,rotinas,p,dk) {
   const tab=document.getElementById('tab-'+tabId);
   if(!tab) return; // segurança: aba não existe no DOM
@@ -1165,7 +1193,7 @@ function renderRotinas(tabId,rotinas,p,dk) {
   tab.innerHTML=html;
 }
 
-// ── RENDER CORVU ──────────────────────────────────────────────────────
+// -- RENDER CORVU ------------------------------------------------------
 function renderCorvu(tabId,lista,p) {
   const tab = document.getElementById('tab-'+tabId) || document.getElementById(tabId);
   const dados=getCorvuDados(p);
@@ -1182,7 +1210,7 @@ function renderCorvu(tabId,lista,p) {
 
   // Aviso especial para o Corvu Mensal
   if(isMenual) {
-    html+=`<div class="aviso-corvu-mensal">⚠️ Executar somente após atualizar a data mensal do IEPA</div>`;
+    html+=`<div class="aviso-corvu-mensal">?? Executar somente após atualizar a data mensal do IEPA</div>`;
   }
 
   html+=`<div style="overflow-x:auto;">
@@ -1206,14 +1234,14 @@ function renderCorvu(tabId,lista,p) {
       <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_${p==='corvu'?'corvu_'+diaAtual:p==='corvumensal'?'corvumensal_'+getMesReferencia():p}')" onblur="saveCorvuCampo('${p}',${idx},'servidor',this.value)"></td>
       <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_${p==='corvu'?'corvu_'+diaAtual:p==='corvumensal'?'corvumensal_'+getMesReferencia():p}')" onblur="saveCorvuCampo('${p}',${idx},'usuario',this.value)"></td>
       <td><input type="text" class="corvu-input upper" placeholder="Terminal" value="${d.terminal||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_${p==='corvu'?'corvu_'+diaAtual:p==='corvumensal'?'corvumensal_'+getMesReferencia():p}')" onblur="saveCorvuCampo('${p}',${idx},'terminal',this.value)"></td>
-      ${comBloqueio?`<td><button class="btn-block ${isB?'unblock':''}" onclick="toggleCorvuBlock('${p}',${idx})">${isB?'🔓':'🔒'}</button></td>`:''}
+      ${comBloqueio?`<td><button class="btn-block ${isB?'unblock':''}" onclick="toggleCorvuBlock('${p}',${idx})">${isB?'??':'??'}</button></td>`:''}
     </tr>`;
   });
   html+=`</tbody></table></div>`;
   tab.innerHTML=html;
 }
 
-// ── RENDER CORVU COM DATA (para abas dinâmicas do dia anterior) ───────
+// -- RENDER CORVU COM DATA (para abas dinâmicas do dia anterior) -------
 function renderCorvuDia(containerId, lista, diaKey) {
   const tab = document.getElementById('tab-' + containerId) || document.getElementById(containerId);
   if (!tab) return;
@@ -1239,7 +1267,7 @@ function renderCorvuDia(containerId, lista, diaKey) {
       <td><input type="text" class="corvu-input upper" placeholder="Servidor" value="${d.servidor||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_corvu_${diaKey}')" onblur="saveCorvuCampoDia('${diaKey}',${idx},'servidor',this.value)"></td>
       <td><input type="text" class="corvu-input upper" placeholder="Usuário" value="${d.usuario||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_corvu_${diaKey}')" onblur="saveCorvuCampoDia('${diaKey}',${idx},'usuario',this.value)"></td>
       <td><input type="text" class="corvu-input upper" placeholder="Terminal" value="${d.terminal||''}" ${isB?'disabled':''} oninput="this.value=this.value.toUpperCase();marcarEdicaoLocal('corvu_dados_corvu_${diaKey}')" onblur="saveCorvuCampoDia('${diaKey}',${idx},'terminal',this.value)"></td>
-      <td><button class="btn-block ${isB?'unblock':''}" onclick="toggleCorvuBlockDia('${diaKey}',${idx})">${isB?'🔓':'🔒'}</button></td>
+      <td><button class="btn-block ${isB?'unblock':''}" onclick="toggleCorvuBlockDia('${diaKey}',${idx})">${isB?'??':'??'}</button></td>
     </tr>`;
   });
   html += `</tbody></table></div>`;
@@ -1257,7 +1285,7 @@ async function toggleCorvuBlockDia(diaKey, idx) {
   renderAll();
 }
 
-// ── RELÓGIO ───────────────────────────────────────────────────────────
+// -- RELÓGIO -----------------------------------------------------------
 function atualizarRelogio() {
   const now=new Date();
   document.getElementById('relogioHeader').textContent=
@@ -1265,7 +1293,7 @@ function atualizarRelogio() {
 }
 function verificarMudancaDia() { const n=getDiaKey(); if(n!==diaAtual){diaAtual=n;renderAll();} }
 
-// ── INIT ──────────────────────────────────────────────────────────────
+// -- INIT --------------------------------------------------------------
 // Cópias trabalháveis dos arrays base — serão modificadas pelo merge de customizações
 let _rotinasDiaria    = [...ROTINAS_DIARIA];
 let _rotinasFds       = [...ROTINAS_FDS_NOVO];
