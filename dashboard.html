@@ -377,7 +377,6 @@ function renderTabBar() {
     html += `<span class="tab-anterior-grupo">
       <button class="tab-btn tab-btn-anterior${abaAtiva===idR?' active':''}" onclick="abrirTab('${idR}')">⚠️ Diário ${label}</button>
       <button class="tab-btn tab-btn-anterior${abaAtiva===idC?' active':''}" onclick="abrirTab('${idC}')">⚠️ Corvu ${label}</button>
-      <button class="tab-btn-fechar" title="Fechar abas do dia ${label}" onclick="fecharAbaDiaAnterior('${diaKey}')">✕</button>
     </span>`;
   });
 
@@ -388,7 +387,6 @@ function renderTabBar() {
     const idF = 'tab-fds-' + fdsKey;
     html += `<span class="tab-anterior-grupo">
       <button class="tab-btn tab-btn-anterior${abaAtiva===idF?' active':''}" onclick="abrirTab('${idF}')">⚠️ FDS ${label}</button>
-      <button class="tab-btn-fechar" title="Fechar aba FDS ${label}" onclick="fecharAbaFds('${fdsKey}')">✕</button>
     </span>`;
   });
 
