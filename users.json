@@ -1,0 +1,16 @@
+[
+  { "username": "Coamo1",       "password": "Coamo1",   "role": "operador" },
+  { "username": "admin",        "password": "admin123",  "role": "admin"    },
+  { "username": "MFERRAZ",      "password": "123456",    "role": "admin",    "primeiroAcesso": true },
+  { "username": "lpereira",     "password": "123456",    "role": "admin",    "primeiroAcesso": true },
+  { "username": "hsilva",       "password": "123456",    "role": "operador", "primeiroAcesso": true },
+  { "username": "chcarvalho",   "password": "123456",    "role": "operador", "primeiroAcesso": true },
+  { "username": "vitorsilva",   "password": "123456",    "role": "operador", "primeiroAcesso": true },
+  { "username": "vhonorato",    "password": "123456",    "role": "operador", "primeiroAcesso": true },
+  { "username": "adolinek",     "password": "123456",    "role": "operador", "primeiroAcesso": true },
+  { "username": "eduardosilva", "password": "123456",    "role": "operador", "primeiroAcesso": true },
+  { "username": "coliveira",    "password": "123456",    "role": "operador", "primeiroAcesso": true },
+  { "username": "eklein",       "password": "123456",    "role": "operador", "primeiroAcesso": true },
+  { "username": "mmartins",     "password": "123456",    "role": "operador", "primeiroAcesso": true },
+  { "username": "phdias",       "password": "123456",    "role": "operador", "primeiroAcesso": true }
+]
