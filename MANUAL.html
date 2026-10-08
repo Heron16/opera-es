@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Manual do Sistema de Operações – Coamo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #222; background: #fff; font-size: 14px; }
+
+    /* CAPA */
+    .capa { background: #1a2233; color: #fff; text-align: center; padding: 80px 40px; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; page-break-after: always; }
+    .capa h1 { font-size: 2.4rem; color: #58a6ff; margin-bottom: 12px; }
+    .capa h2 { font-size: 1.3rem; color: #c9d1d9; font-weight: 400; margin-bottom: 40px; }
+    .capa .logo { font-size: 4rem; margin-bottom: 20px; }
+    .capa .info { color: #8b949e; font-size: 0.95rem; margin-top: 60px; line-height: 2; }
+    .capa .link { color: #58a6ff; font-size: 1.05rem; margin-top: 10px; }
+    .capa .linha { border-top: 1px solid rgba(88,166,255,0.3); width: 200px; margin: 30px auto; }
+
+    /* SUMÁRIO */
+    .sumario { max-width: 900px; margin: 0 auto; padding: 60px 40px; page-break-after: always; }
+    .sumario h2 { font-size: 1.6rem; color: #1a2233; border-bottom: 3px solid #58a6ff; padding-bottom: 8px; margin-bottom: 24px; }
+    .sumario ol { counter-reset: item; list-style: none; }
+    .sumario ol li { counter-increment: item; padding: 6px 0; border-bottom: 1px dotted #ddd; display: flex; justify-content: space-between; }
+    .sumario ol li::before { content: counter(item) ". "; color: #58a6ff; font-weight: bold; min-width: 30px; }
+    .sumario ol li a { color: #1a2233; text-decoration: none; flex: 1; }
+    .sumario ol li a:hover { color: #58a6ff; }
+
+    /* CONTEÚDO */
+    .conteudo { max-width: 900px; margin: 0 auto; padding: 40px 40px; }
+    h2.secao { font-size: 1.4rem; color: #1a2233; border-bottom: 3px solid #58a6ff; padding-bottom: 8px; margin: 50px 0 20px; page-break-before: auto; }
+    h3.sub { font-size: 1.05rem; color: #1a2233; margin: 28px 0 10px; padding-left: 10px; border-left: 3px solid #58a6ff; }
+    p { margin-bottom: 10px; line-height: 1.7; }
+    ul, ol { margin: 8px 0 12px 24px; line-height: 1.9; }
+    li { margin-bottom: 2px; }
+
+    /* BLOCOS */
+    .destaque { background: #f0f6ff; border-left: 4px solid #58a6ff; padding: 12px 16px; margin: 12px 0; border-radius: 0 6px 6px 0; }
+    .aviso { background: #fff8e1; border-left: 4px solid #ffa000; padding: 12px 16px; margin: 12px 0; border-radius: 0 6px 6px 0; }
+    .sucesso { background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 12px 16px; margin: 12px 0; border-radius: 0 6px 6px 0; }
+
+    /* TABELAS */
+    .tabela { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 0.92rem; }
+    .tabela th { background: #1a2233; color: #fff; padding: 10px 12px; text-align: left; }
+    .tabela td { padding: 9px 12px; border-bottom: 1px solid #e0e0e0; vertical-align: top; }
+    .tabela tr:nth-child(even) td { background: #f5f8ff; }
+    .tabela tr:hover td { background: #e8f0ff; }
+
+    /* BADGES */
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 0.78rem; font-weight: 700; }
+    .badge.admin { background: #e8f5e9; color: #2e7d32; }
+    .badge.operador { background: #e3f2fd; color: #1565c0; }
+    .badge.sim { background: #e8f5e9; color: #2e7d32; }
+    .badge.nao { background: #fce4ec; color: #c62828; }
+
+    /* STATUS */
+    .status-ex  { display: inline-block; border: 1px solid #58a6ff; color: #58a6ff; background: rgba(88,166,255,0.08); padding: 2px 10px; border-radius: 4px; font-size: 0.82rem; }
+    .status-enc { display: inline-block; border: 1px solid #3fb950; color: #3fb950; background: rgba(63,185,80,0.08); padding: 2px 10px; border-radius: 4px; font-size: 0.82rem; }
+    .status-err { display: inline-block; border: 1px solid #f85149; color: #f85149; background: rgba(248,81,73,0.08); padding: 2px 10px; border-radius: 4px; font-size: 0.82rem; }
+    .status-blq { display: inline-block; border: 1px solid #888; color: #888; background: rgba(0,0,0,0.05); padding: 2px 10px; border-radius: 4px; font-size: 0.82rem; text-decoration: line-through; }
+
+    /* PASSOS */
+    .passo { display: flex; align-items: flex-start; gap: 12px; margin: 10px 0; }
+    .numero { display: inline-flex; align-items: center; justify-content: center; background: #1a2233; color: #fff; border-radius: 50%; width: 28px; height: 28px; font-weight: bold; font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
+    .passo-texto { flex: 1; line-height: 1.7; }
+
+    /* MOCKUP TELA */
+    .tela { border: 2px solid #30363d; border-radius: 10px; padding: 20px; margin: 16px 0; background: #0d1117; color: #c9d1d9; font-family: monospace; font-size: 0.85rem; }
+    .tela .header-tela { background: #161b22; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+    .tela .header-tela span { color: #58a6ff; font-weight: bold; font-size: 0.9rem; }
+    .tela .campo { background: #21262d; border: 1px solid #30363d; border-radius: 6px; padding: 7px 12px; margin: 6px 0; color: #e6edf3; }
+    .tela .btn-t { background: #1f6feb; color: #fff; border: none; border-radius: 6px; padding: 8px 20px; margin-top: 10px; cursor: pointer; font-size: 0.88rem; }
+    .tela .btn-t.verde { background: #238636; }
+    .tela .aba { display: inline-block; background: #161b22; border: 1px solid #30363d; border-radius: 6px 6px 0 0; padding: 6px 14px; color: #8b949e; font-size: 0.82rem; margin-right: 4px; }
+    .tela .aba.ativa { background: #1f6feb; color: #fff; border-color: #1f6feb; }
+    .tela .aba.alerta { background: #f0a500; color: #000; border-color: #f0a500; }
+    .tela .linha-rotina { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; margin: 4px 0; background: #161b22; border-left: 3px solid #30363d; }
+    .tela .linha-rotina.azul { border-left-color: #58a6ff; background: rgba(88,166,255,0.06); }
+    .tela .linha-rotina.verde { border-left-color: #3fb950; opacity: 0.5; }
+    .tela .linha-rotina.vermelho { border-left-color: #f85149; background: rgba(248,81,73,0.06); }
+    .tela .hora { color: #58a6ff; font-size: 0.78rem; min-width: 40px; }
+    .tela .texto-r { flex: 1; font-size: 0.82rem; color: #c9d1d9; }
+    .tela .sel { background: #21262d; border: 1px solid #30363d; border-radius: 4px; padding: 3px 8px; color: #58a6ff; font-size: 0.78rem; }
+
+    /* TABELA SUMIÇO */
+    .tb-sumico th { background: #1a2233; }
+    .tb-sumico td:first-child { font-weight: 600; }
+    .icon-sim { color: #2e7d32; font-weight: bold; }
+    .icon-nao { color: #c62828; font-weight: bold; }
+
+    /* RODAPÉ */
+    .rodape { text-align: center; margin-top: 60px; color: #8b949e; font-size: 0.82rem; border-top: 1px solid #eee; padding-top: 20px; padding-bottom: 40px; }
+
+    @media print {
+      .capa { page-break-after: always; }
+      .sumario { page-break-after: always; }
+      h2.secao { page-break-before: auto; }
+      .tela, .destaque, .aviso { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════ CAPA -->
+<div class="capa">
+  <div class="logo">⚙️</div>
+  <h1>Sistema de Operações – Coamo</h1>
+  <h2>Manual do Usuário</h2>
+  <div class="linha"></div>
+  <p style="color:#c9d1d9;font-size:1rem;">Rotinas, Escalas e Acompanhamento de Processos de TI</p>
+  <div class="info">
+    <p>Versão 2.0 — Outubro 2026</p>
+    <p>TI Coamo — Departamento de Operações</p>
+    <p>Gerência de Operações e Serviços de TI</p>
+  </div>
+  <div class="link" style="margin-top:30px;">🌐 https://opera-es-olive.vercel.app</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ SUMÁRIO -->
+<div class="sumario">
+  <h2>Sumário</h2>
+  <ol>
+    <li><a href="#visao">Visão Geral do Sistema</a></li>
+    <li><a href="#acesso">Acesso e Login</a></li>
+    <li><a href="#senha">Senha — Criação, Troca e Segurança</a></li>
+    <li><a href="#abas">Abas do Sistema</a></li>
+    <li><a href="#rotinas">Registrando Rotinas Diárias</a></li>
+    <li><a href="#corvu">Corvu Diário e Mensal</a></li>
+    <li><a href="#fds">Final de Semana</a></li>
+    <li><a href="#mensal">Rotinas Mensais</a></li>
+    <li><a href="#sumico">Regras de Sumiço das Abas</a></li>
+    <li><a href="#diasant">Abas de Dias Anteriores</a></li>
+    <li><a href="#horarios">Gerenciamento de Horários</a></li>
+    <li><a href="#pdf">Exportar PDF</a></li>
+    <li><a href="#permissoes">Perfis de Acesso</a></li>
+    <li><a href="#dicas">Dicas e Atalhos</a></li>
+    <li><a href="#tecnico">Informações Técnicas</a></li>
+  </ol>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ CONTEÚDO -->
+<div class="conteudo">
+
+<!-- ─────────────────── 1. VISÃO GERAL -->
+<h2 class="secao" id="visao">1. Visão Geral do Sistema</h2>
+<p>O <strong>Sistema de Operações – Coamo</strong> é uma plataforma web desenvolvida para a equipe de TI da Coamo acompanhar e controlar as rotinas diárias, de final de semana e mensais executadas no ambiente Uniface e Corvu. O sistema permite registrar o status de cada rotina, horários de início e fim, e sincroniza as informações em tempo real entre todos os usuários logados.</p>
+
+<div class="destaque">
+  <strong>Endereço de acesso:</strong><br>
+  🌐 <strong>https://opera-es-olive.vercel.app</strong><br>
+  Funciona em qualquer navegador (Chrome, Edge, Firefox) em qualquer computador.
+</div>
+
+<h3 class="sub">Recursos principais</h3>
+<ul>
+  <li>Controle de rotinas diárias, finais de semana, mensais e anuais</li>
+  <li>Acompanhamento do Corvu diário e mensal com tabela de execuções</li>
+  <li>Registro de horários de início e fim de cada rotina</li>
+  <li>Sincronização em tempo real entre todos os operadores</li>
+  <li>Abas automáticas para dias anteriores com pendências</li>
+  <li>Exportação para PDF das rotinas da aba ativa</li>
+  <li>Gerenciamento de escalas de operadores (Semana e Final de Semana)</li>
+  <li>Controle de acesso por perfil: Operador e Admin</li>
+  <li>Troca de senha obrigatória a cada 30 dias</li>
+</ul>
+
+<!-- ─────────────────── 2. ACESSO E LOGIN -->
+<h2 class="secao" id="acesso">2. Acesso e Login</h2>
+
+<h3 class="sub">Como acessar</h3>
+<div class="passo"><span class="numero">1</span><div class="passo-texto">Abra o navegador (Chrome ou Edge recomendado)</div></div>
+<div class="passo"><span class="numero">2</span><div class="passo-texto">Digite o endereço: <strong>https://opera-es-olive.vercel.app</strong></div></div>
+<div class="passo"><span class="numero">3</span><div class="passo-texto">Digite seu usuário e senha</div></div>
+<div class="passo"><span class="numero">4</span><div class="passo-texto">Clique em <strong>Entrar</strong> ou pressione <strong>Enter</strong></div></div>
+
+<div class="tela">
+  <div class="header-tela"><span>⚙️ Operações — Sistema de Rotinas e Escalas</span></div>
+  <div class="campo">👤 Usuário</div>
+  <div class="campo">🔒 Senha</div>
+  <div style="margin-top:10px;"><button class="btn-t">Entrar</button></div>
+</div>
+
+<div class="destaque">
+  <strong>Login flexível:</strong> O usuário pode ser digitado em maiúsculas ou minúsculas. <code>hsilva</code>, <code>HSILVA</code> e <code>Hsilva</code> funcionam da mesma forma.
+</div>
+
+<h3 class="sub">Usuários do sistema</h3>
+<table class="tabela">
+  <tr><th>Usuário</th><th>Perfil</th><th>Acesso</th></tr>
+  <tr><td>Coamo1</td><td><span class="badge operador">Operador</span></td><td>Visualiza e registra rotinas</td></tr>
+  <tr><td>admin</td><td><span class="badge admin">Admin</span></td><td>Acesso total + gerencia horários e rotinas</td></tr>
+  <tr><td>MFERRAZ, lpereira</td><td><span class="badge admin">Admin</span></td><td>Acesso total</td></tr>
+  <tr><td>hsilva, chcarvalho, vitorsilva...</td><td><span class="badge operador">Operador</span></td><td>Visualiza e registra rotinas</td></tr>
+</table>
+
+<div class="aviso">
+  <strong>⚠️ Sessão:</strong> A sessão expira em <strong>12 horas</strong>. Após esse tempo o sistema redireciona automaticamente para a tela de login.
+</div>
+
+<!-- ─────────────────── 3. SENHA -->
+<h2 class="secao" id="senha">3. Senha — Criação, Troca e Segurança</h2>
+
+<h3 class="sub">Primeiro acesso</h3>
+<p>No primeiro login com a senha padrão (<code>123456</code>), o sistema redireciona automaticamente para a tela de criação de senha. Você precisará definir uma senha pessoal forte.</p>
+
+<h3 class="sub">Requisitos de senha forte</h3>
+<ul>
+  <li>Mínimo de <strong>8 caracteres</strong></li>
+  <li>Pelo menos uma <strong>letra maiúscula</strong> (A–Z)</li>
+  <li>Pelo menos uma <strong>letra minúscula</strong> (a–z)</li>
+  <li>Pelo menos um <strong>número</strong> (0–9)</li>
+  <li>Pelo menos um <strong>caractere especial</strong> (!@#$%^&amp;*...)</li>
+</ul>
+
+<div class="sucesso">
+  <strong>Exemplo de senha forte:</strong> <code>Coamo@2026!</code>, <code>Operador#12</code>, <code>TiCoamo$99</code>
+</div>
+
+<h3 class="sub">Troca obrigatória a cada 30 dias</h3>
+<p>O sistema exige a troca de senha a cada <strong>30 dias</strong>. Quando a senha expirar, ao fazer login o sistema redireciona automaticamente para a tela de troca de senha antes de acessar o dashboard.</p>
+
+<h3 class="sub">Alterar senha voluntariamente</h3>
+<p>A qualquer momento, clique no seu <strong>nome no topo da tela</strong> para abrir o menu do usuário e selecione <strong>🔑 Alterar Senha</strong>.</p>
+
+<div class="tela">
+  <div class="header-tela"><span>⚙️ Sistema de Operações – Coamo</span></div>
+  <div style="display:flex;align-items:center;gap:10px;background:#161b22;border-radius:6px;padding:8px 12px;width:fit-content;">
+    <span style="color:#c9d1d9;">👤 hsilva (operador)</span>
+    <span style="color:#8b949e;font-size:0.75rem;">▼</span>
+  </div>
+  <div style="background:#16213e;border:1px solid #30363d;border-radius:8px;padding:8px;margin-top:4px;width:180px;">
+    <div style="padding:8px 12px;color:#4fc3f7;font-size:0.85rem;cursor:pointer;">🔑 Alterar Senha</div>
+    <div style="padding:8px 12px;color:#c9d1d9;font-size:0.85rem;cursor:pointer;">🚪 Sair</div>
+  </div>
+</div>
+
+<div class="aviso">
+  <strong>⚠️ Restrição:</strong> A nova senha <strong>não pode ser igual à senha atual</strong>. O sistema bloqueará a tentativa caso sejam iguais.
+</div>
+
+<!-- ─────────────────── 4. ABAS -->
+<h2 class="secao" id="abas">4. Abas do Sistema</h2>
+<p>Após o login, o sistema exibe as seguintes abas no topo da tela. Cada aba só aparece quando relevante:</p>
+
+<div class="tela">
+  <div style="margin-bottom:8px;">
+    <span class="aba alerta">⚠️ Diário 01/10</span>
+    <span class="aba alerta">⚠️ Corvu 01/10</span>
+    <span class="aba ativa">📋 Diário</span>
+    <span class="aba">🖥️ Corvu Diário</span>
+    <span class="aba">📆 Final de Semana</span>
+    <span class="aba">📅 Mensal</span>
+    <span class="aba">🖥️ Corvu Mensal</span>
+    <span class="aba">📆 Anual</span>
+    <span class="aba">🗓️ Horários</span>
+  </div>
+</div>
+
+<table class="tabela">
+  <tr><th>Aba</th><th>Quando aparece</th><th>Conteúdo</th></tr>
+  <tr><td>⚠️ Diário DD/MM</td><td>Quando há rotinas pendentes de dias anteriores</td><td>Rotinas do dia anterior com status registrado mas não concluídas</td></tr>
+  <tr><td>⚠️ Corvu DD/MM</td><td>Quando há corvu com dados mas sem horário de fim</td><td>Corvu do dia anterior com início mas sem fim</td></tr>
+  <tr><td>📋 Diário</td><td>Sempre</td><td>Rotinas Uniface do dia atual organizadas por seção</td></tr>
+  <tr><td>🖥️ Corvu Diário</td><td>Sempre</td><td>Tabela de execuções do Corvu — início, fim, servidor, usuário, terminal</td></tr>
+  <tr><td>📆 Final de Semana</td><td>Sexta, Sábado e Domingo</td><td>Rotinas do sábado noite, virada e domingo</td></tr>
+  <tr><td>📅 Mensal</td><td>Últimos 3 dias do mês + primeiros 15 do mês seguinte se pendente</td><td>Rotinas mensais Uniface</td></tr>
+  <tr><td>🖥️ Corvu Mensal</td><td>Mesma janela do Mensal</td><td>Tabela Corvu mensal</td></tr>
+  <tr><td>📆 Anual</td><td>Sempre</td><td>Rotinas anuais (executar quando solicitado)</td></tr>
+  <tr><td>🗓️ Horários</td><td>Sempre</td><td>Escalas de operadores por mês</td></tr>
+</table>
+
+<!-- ─────────────────── 5. ROTINAS DIÁRIAS -->
+<h2 class="secao" id="rotinas">5. Registrando Rotinas Diárias</h2>
+
+<h3 class="sub">Status das rotinas</h3>
+<p>Cada rotina possui um seletor de status:</p>
+
+<table class="tabela">
+  <tr><th>Status</th><th>Visual</th><th>Significado</th></tr>
+  <tr><td><span class="status-ex">▶ Executando</span></td><td>Borda azul, linha destacada</td><td>Rotina em andamento no momento</td></tr>
+  <tr><td><span class="status-enc">✔ Encerrado</span></td><td>Linha esmaecida após informar fim</td><td>Rotina concluída com sucesso</td></tr>
+  <tr><td><span class="status-err">✖ Erro</span></td><td>Borda vermelha</td><td>Rotina com problema — abre campos para erro e chamado</td></tr>
+  <tr><td><span class="status-blq">Bloqueada</span></td><td>Linha riscada com badge BLOQUEADA</td><td>Rotina não executada neste dia</td></tr>
+</table>
+
+<div class="tela">
+  <div class="linha-rotina azul">
+    <span class="hora">19:00</span>
+    <span class="texto-r">Rotina Diária – Cooperados</span>
+    <select class="sel"><option>▶ Executando</option></select>
+    <span style="color:#8b949e;font-size:0.78rem;">19:05 → </span>
+  </div>
+  <div class="linha-rotina verde">
+    <span class="hora">19:00</span>
+    <span class="texto-r">Job Cálculo do Prêmio de Produção</span>
+    <select class="sel"><option>✔ Encerrado</option></select>
+    <span style="color:#8b949e;font-size:0.78rem;">19:02 → 19:45</span>
+  </div>
+  <div class="linha-rotina vermelho">
+    <span class="hora">21:00</span>
+    <span class="texto-r">Rotina Batch Diária Sementes</span>
+    <select class="sel"><option>✖ Erro</option></select>
+    <span style="color:#f85149;font-size:0.78rem;">Chamado #12345</span>
+  </div>
+</div>
+
+<h3 class="sub">Registrando horários de início e fim</h3>
+<ul>
+  <li>Ao selecionar <strong>Executando</strong>, aparece o campo de <strong>Início</strong></li>
+  <li>Ao selecionar <strong>Encerrado</strong> ou <strong>Erro</strong>, aparece o campo de <strong>Fim</strong></li>
+  <li>Os dados são salvos automaticamente ao sair do campo (Tab ou clique fora)</li>
+</ul>
+
+<div class="destaque">
+  <strong>Atalho TAB:</strong> Com o campo de hora em branco, pressione <strong>TAB</strong> para preencher automaticamente com a hora atual. Muito útil para agilizar o registro.
+</div>
+
+<h3 class="sub">Bloqueando uma rotina</h3>
+<p>O botão 🔒 ao lado de cada rotina serve para bloqueá-la quando não precisa ser executada naquele dia (ex: feriado, rotina não aplicável). A rotina fica com aparência riscada e não pode ser editada. Clique em 🔓 para desbloquear.</p>
+
+<h3 class="sub">Rotinas com campos especiais</h3>
+<p>Algumas rotinas possuem campos de texto no lugar do seletor de status, como:</p>
+<ul>
+  <li><strong>OK / Sem arquivo</strong> — para rotinas de importação de arquivos</li>
+  <li><strong>Brasil / Itaú / Bradesco</strong> — para rotinas de remessa bancária</li>
+  <li><strong>Servidor / Terminal</strong> — para rotinas Credicoamo</li>
+</ul>
+
+<h3 class="sub">Observação do operador</h3>
+<p>O botão <strong>💬 Obs</strong> ao lado de cada rotina permite adicionar uma observação textual livre, visível para todos os operadores. Útil para registrar informações adicionais sobre a execução.</p>
+
+<!-- ─────────────────── 6. CORVU -->
+<h2 class="secao" id="corvu">6. Corvu Diário e Mensal</h2>
+
+<p>As abas <strong>Corvu Diário</strong> e <strong>Corvu Mensal</strong> apresentam uma tabela de execuções. Para cada linha preencha:</p>
+
+<table class="tabela">
+  <tr><th>Campo</th><th>O que registrar</th></tr>
+  <tr><td>Início</td><td>Horário que a rotina do Corvu iniciou</td></tr>
+  <tr><td>Fim</td><td>Horário que a rotina finalizou</td></tr>
+  <tr><td>Servidor</td><td>Nome do servidor (ex: UNIFACEBG01)</td></tr>
+  <tr><td>Usuário</td><td>Usuário logado no Corvu</td></tr>
+  <tr><td>Terminal</td><td>Terminal utilizado</td></tr>
+</table>
+
+<div class="aviso">
+  <strong>⚠️ Corvu Mensal:</strong> As rotinas do Corvu Mensal devem ser executadas <strong>somente após atualizar a data mensal do IEPA</strong> no Uniface.
+</div>
+
+<div class="destaque">
+  <strong>Bloqueio de linha Corvu:</strong> O botão 🔒 no final de cada linha bloqueia uma rotina Corvu que não será executada. A linha fica desabilitada.
+</div>
+
+<!-- ─────────────────── 7. FINAL DE SEMANA -->
+<h2 class="secao" id="fds">7. Final de Semana</h2>
+
+<p>A aba <strong>📆 Final de Semana</strong> aparece automaticamente na <strong>sexta-feira</strong> para o operador visualizar o que vem, e permanece visível no <strong>sábado e domingo</strong> enquanto houver rotinas em aberto.</p>
+
+<h3 class="sub">Fluxo do final de semana</h3>
+<table class="tabela">
+  <tr><th>Período</th><th>O que acontece</th></tr>
+  <tr><td>Sábado manhã/tarde</td><td>Rotinas normais na aba <strong>Diário</strong> (igual a qualquer dia)</td></tr>
+  <tr><td>Sábado noite (19:00+)</td><td>Início das rotinas da aba <strong>Final de Semana</strong> — seção Sábado Noite</td></tr>
+  <tr><td>Sábado virada (00:01+)</td><td>Continuação na seção Sábado Virada + Corvu Sábado</td></tr>
+  <tr><td>Domingo manhã</td><td>Seção Domingo Manhã + Corvu Domingo</td></tr>
+  <tr><td>Domingo noite</td><td>Seção Domingo Noite — última rotina é Resetar Servidores (23:00)</td></tr>
+  <tr><td>Segunda de madrugada</td><td>Voltam as rotinas normais na aba <strong>Diário</strong></td></tr>
+</table>
+
+<h3 class="sub">Seções da aba Final de Semana</h3>
+<ul>
+  <li><strong>Sábado Noite</strong> — rotinas após 19:00h do sábado</li>
+  <li><strong>Sábado Virada</strong> — rotinas após meia-noite (00:01h)</li>
+  <li><strong>Corvu Sábado</strong> — tabela Corvu do sábado (inline na aba FDS)</li>
+  <li><strong>Domingo Manhã</strong> — rotinas do domingo manhã</li>
+  <li><strong>Corvu Domingo</strong> — tabela Corvu do domingo (inline na aba FDS)</li>
+  <li><strong>Domingo Madrugada</strong> — Carga BI (03:00h)</li>
+  <li><strong>Domingo Noite</strong> — Resetar Servidores (23:00h)</li>
+</ul>
+
+<!-- ─────────────────── 8. MENSAL -->
+<h2 class="secao" id="mensal">8. Rotinas Mensais</h2>
+
+<p>A aba <strong>📅 Mensal</strong> aparece automaticamente nos <strong>últimos 3 dias do mês</strong>. Por exemplo, num mês com 31 dias, a aba aparece a partir do dia 29.</p>
+
+<div class="destaque">
+  <strong>Persistência:</strong> Se o mensal ainda tiver rotinas pendentes quando o mês virar, a aba continua aparecendo nos <strong>primeiros 15 dias do mês seguinte</strong> até que tudo seja concluído.
+</div>
+
+<div class="aviso">
+  <strong>⚠️ Corvu Mensal:</strong> Só execute após atualizar a data do IEPA no Uniface. O sistema exibe um aviso na aba.
+</div>
+
+<!-- ─────────────────── 9. REGRAS DE SUMIÇO -->
+<h2 class="secao" id="sumico">9. Regras de Sumiço das Abas</h2>
+
+<p>As abas somem automaticamente quando todas as condições estão atendidas. A regra é <strong>igual para todas as abas</strong>:</p>
+
+<table class="tabela tb-sumico">
+  <tr><th>Situação</th><th>A aba some?</th></tr>
+  <tr><td>Sem nenhum status registrado</td><td class="icon-nao">❌ Não some</td></tr>
+  <tr><td>Com status mas sem horário de fim</td><td class="icon-nao">❌ Não some</td></tr>
+  <tr><td>Com status "Executando" ou "Erro"</td><td class="icon-nao">❌ Não some</td></tr>
+  <tr><td>Tudo "Encerrado + Fim", mas menos de 15 min</td><td class="icon-nao">❌ Não some</td></tr>
+  <tr><td>Tudo "Encerrado + Fim" + <strong>15 minutos passados</strong></td><td class="icon-sim">✅ Some automaticamente</td></tr>
+</table>
+
+<div class="destaque">
+  <strong>Corvu:</strong> Para o Corvu, a condição é apenas <strong>Fim preenchido + 15 minutos</strong> (não há status de encerrado no Corvu, só o horário de fim).
+</div>
+
+<table class="tabela">
+  <tr><th>Aba</th><th>Quando aparece</th><th>Quando some</th></tr>
+  <tr><td>📋 Diário</td><td>Sempre</td><td>Todas encerradas+fim+15min</td></tr>
+  <tr><td>🖥️ Corvu Diário</td><td>Sempre</td><td>Todas com fim+15min</td></tr>
+  <tr><td>📆 FDS</td><td>Sex/Sáb/Dom</td><td>Tudo (rotinas+corvus) encerrado+fim+15min</td></tr>
+  <tr><td>📅 Mensal</td><td>Últimos 3 dias do mês</td><td>Todas encerradas+fim+15min</td></tr>
+  <tr><td>🖥️ Corvu Mensal</td><td>Últimos 3 dias do mês</td><td>Todas com fim+15min</td></tr>
+  <tr><td>📆 Anual</td><td>Sempre</td><td>Nunca some automaticamente</td></tr>
+</table>
+
+<!-- ─────────────────── 10. DIAS ANTERIORES -->
+<h2 class="secao" id="diasant">10. Abas de Dias Anteriores</h2>
+
+<p>Quando existem rotinas ou corvu de dias anteriores com dados registrados mas não concluídos, o sistema cria abas dinâmicas no topo com o ícone ⚠️:</p>
+
+<div class="tela">
+  <div style="margin-bottom:8px;">
+    <span class="aba alerta">⚠️ Diário 25/08</span>
+    <span class="aba alerta">⚠️ Corvu 25/08</span>
+    <span class="aba ativa">📋 Diário</span>
+    <span class="aba">🖥️ Corvu Diário</span>
+  </div>
+</div>
+
+<h3 class="sub">Regras das abas dinâmicas</h3>
+<ul>
+  <li>O sistema busca até <strong>10 dias para trás</strong></li>
+  <li>A aba aparece se há <strong>qualquer status registrado</strong> naquele dia</li>
+  <li>Persiste enquanto houver rotinas sem encerrado+fim ou corvu sem fim</li>
+  <li>Some automaticamente após tudo concluído + 15 minutos</li>
+  <li>O operador pode fechar manualmente clicando no <strong>X</strong> da aba</li>
+</ul>
+
+<div class="aviso">
+  <strong>⚠️ Atenção:</strong> Se você marcou uma rotina no dia 21 e só vai terminar de preencher no dia 27, a aba continua aparecendo. Ela só some quando <strong>tudo</strong> estiver preenchido com encerrado + horário de fim.
+</div>
+
+<!-- ─────────────────── 11. HORÁRIOS -->
+<h2 class="secao" id="horarios">11. Gerenciamento de Horários</h2>
+
+<p>A página <strong>🗓️ Horários</strong> permite cadastrar as escalas de trabalho por mês. Possui duas abas:</p>
+
+<table class="tabela">
+  <tr><th>Aba</th><th>Conteúdo</th><th>Troca</th></tr>
+  <tr><td>🗓️ Semana</td><td>Escala da semana regular</td><td>Todo dia 16 do mês</td></tr>
+  <tr><td>📆 Final de Semana</td><td>Escala dos finais de semana</td><td>Todo final de semana</td></tr>
+</table>
+
+<div class="aviso">
+  <strong>⚠️ Edição restrita:</strong> Apenas usuários com perfil <strong>Admin</strong> podem adicionar, editar ou remover dias e turnos.
+</div>
+
+<h3 class="sub">Como adicionar um dia (Admin)</h3>
+<div class="passo"><span class="numero">1</span><div class="passo-texto">Clique em <strong>+ Adicionar Dia</strong></div></div>
+<div class="passo"><span class="numero">2</span><div class="passo-texto">Selecione a data — <strong>não é possível selecionar datas passadas</strong></div></div>
+<div class="passo"><span class="numero">3</span><div class="passo-texto">Clique em <strong>Adicionar</strong></div></div>
+<div class="passo"><span class="numero">4</span><div class="passo-texto">Preencha os turnos: horário, nome(s) do operador e observação</div></div>
+<div class="passo"><span class="numero">5</span><div class="passo-texto">Use <strong>+ Turno</strong> para adicionar mais turnos no mesmo dia</div></div>
+
+<h3 class="sub">Campo de horário — recursos</h3>
+<ul>
+  <li><strong>Dropdown de horários fixos:</strong> ao clicar no campo de hora, aparecem os horários predefinidos: <code>00:30 | 06:00 | 07:00 | 12:00 | 13:00 | 19:00</code></li>
+  <li><strong>Scroll do mouse:</strong> com o campo focado, use o scroll do mouse para navegar pelos horários fixos (para cima = horário anterior, para baixo = próximo)</li>
+  <li>Também é possível digitar manualmente qualquer horário</li>
+</ul>
+
+<!-- ─────────────────── 12. EXPORTAR PDF -->
+<h2 class="secao" id="pdf">12. Exportar PDF</h2>
+
+<p>O botão <strong>🖨️ Exportar PDF</strong> no topo da tela gera um PDF da aba que está aberta.</p>
+
+<h3 class="sub">Como exportar</h3>
+<div class="passo"><span class="numero">1</span><div class="passo-texto">Navegue até a aba desejada (Diário, Mensal, Corvu, etc.)</div></div>
+<div class="passo"><span class="numero">2</span><div class="passo-texto">Clique em <strong>🖨️ Exportar PDF</strong></div></div>
+<div class="passo"><span class="numero">3</span><div class="passo-texto">Na janela do navegador, selecione <strong>Salvar como PDF</strong> como destino</div></div>
+<div class="passo"><span class="numero">4</span><div class="passo-texto">Clique em <strong>Salvar</strong></div></div>
+
+<div class="destaque">
+  O nome do arquivo é gerado automaticamente com o tipo e a data. Exemplo: <code>Diaria_15-10-2026.pdf</code>, <code>Corvu_Diario_15-10-2026.pdf</code>
+</div>
+
+<!-- ─────────────────── 13. PERMISSÕES -->
+<h2 class="secao" id="permissoes">13. Perfis de Acesso</h2>
+
+<table class="tabela">
+  <tr><th>Funcionalidade</th><th><span class="badge operador">Operador</span></th><th><span class="badge admin">Admin</span></th></tr>
+  <tr><td>Visualizar rotinas e Corvu</td><td>✅</td><td>✅</td></tr>
+  <tr><td>Registrar status das rotinas</td><td>✅</td><td>✅</td></tr>
+  <tr><td>Registrar horários de início/fim</td><td>✅</td><td>✅</td></tr>
+  <tr><td>Preencher campos do Corvu</td><td>✅</td><td>✅</td></tr>
+  <tr><td>Bloquear/desbloquear rotinas</td><td>✅</td><td>✅</td></tr>
+  <tr><td>Adicionar observações</td><td>✅</td><td>✅</td></tr>
+  <tr><td>Exportar PDF</td><td>✅</td><td>✅</td></tr>
+  <tr><td>Alterar própria senha</td><td>✅</td><td>✅</td></tr>
+  <tr><td>Editar escalas de horários</td><td>❌</td><td>✅</td></tr>
+  <tr><td>Gerenciar rotinas (adicionar/remover)</td><td>❌</td><td>✅</td></tr>
+  <tr><td>Gerenciar usuários</td><td>❌</td><td>✅</td></tr>
+</table>
+
+<!-- ─────────────────── 14. DICAS -->
+<h2 class="secao" id="dicas">14. Dicas e Atalhos</h2>
+
+<table class="tabela">
+  <tr><th>Ação</th><th>Como fazer</th></tr>
+  <tr><td>Preencher hora atual automaticamente</td><td>Deixe o campo vazio e pressione <strong>TAB</strong></td></tr>
+  <tr><td>Confirmar login</td><td>Pressione <strong>Enter</strong></td></tr>
+  <tr><td>Navegar entre campos</td><td>Pressione <strong>TAB</strong></td></tr>
+  <tr><td>Horários fixos no campo de hora</td><td>Clique no campo — aparece dropdown com horários pré-definidos</td></tr>
+  <tr><td>Navegar horários com mouse</td><td>Scroll do mouse sobre o campo de hora</td></tr>
+  <tr><td>Exportar PDF da aba atual</td><td>Clique em <strong>🖨️ Exportar PDF</strong></td></tr>
+  <tr><td>Ver rotinas de dias anteriores</td><td>Clique na aba <strong>⚠️ Diário DD/MM</strong> no topo</td></tr>
+  <tr><td>Alterar senha</td><td>Clique no nome do usuário no topo → <strong>🔑 Alterar Senha</strong></td></tr>
+  <tr><td>Sair do sistema</td><td>Clique no nome do usuário → <strong>🚪 Sair</strong></td></tr>
+</table>
+
+<h3 class="sub">Indicadores visuais das linhas</h3>
+<table class="tabela">
+  <tr><th>Visual</th><th>Significado</th></tr>
+  <tr><td>Linha normal</td><td>Sem status registrado</td></tr>
+  <tr><td>Borda azul + destaque</td><td>Executando</td></tr>
+  <tr><td>Borda azul + campos hora</td><td>Encerrado mas sem horário de fim</td></tr>
+  <tr><td>Linha esmaecida/cinza</td><td>Encerrado com horário de fim ✅</td></tr>
+  <tr><td>Borda vermelha</td><td>Erro registrado</td></tr>
+  <tr><td>Linha riscada</td><td>Bloqueada pelo operador</td></tr>
+</table>
+
+<!-- ─────────────────── 15. TÉCNICO -->
+<h2 class="secao" id="tecnico">15. Informações Técnicas</h2>
+
+<table class="tabela">
+  <tr><th>Item</th><th>Detalhe</th></tr>
+  <tr><td>URL do sistema</td><td>https://opera-es-olive.vercel.app</td></tr>
+  <tr><td>Hospedagem</td><td>Vercel (serverless, automático)</td></tr>
+  <tr><td>Banco de dados</td><td>Upstash Redis (nuvem)</td></tr>
+  <tr><td>Autenticação</td><td>JWT — expira em 12 horas</td></tr>
+  <tr><td>Troca de senha</td><td>Obrigatória a cada 30 dias</td></tr>
+  <tr><td>Sincronização entre usuários</td><td>A cada 2 segundos (polling)</td></tr>
+  <tr><td>Deploy automático</td><td>A cada push no GitHub</td></tr>
+  <tr><td>Dias anteriores buscados</td><td>Até 10 dias para trás</td></tr>
+</table>
+
+<h3 class="sub">APIs do sistema</h3>
+<table class="tabela">
+  <tr><th>Endpoint</th><th>Função</th></tr>
+  <tr><td>/api/login</td><td>Autentica e retorna JWT</td></tr>
+  <tr><td>/api/dados</td><td>Lê todos os dados do Redis</td></tr>
+  <tr><td>/api/salvar</td><td>Salva uma chave no Redis</td></tr>
+  <tr><td>/api/rotinas</td><td>Lê/salva customizações de rotinas (Admin)</td></tr>
+  <tr><td>/api/admin-usuarios</td><td>Gerencia usuários (Admin)</td></tr>
+  <tr><td>/api/trocar-senha</td><td>Troca senha do usuário logado</td></tr>
+  <tr><td>/api/debug</td><td>Visualiza dados brutos do Redis (Admin)</td></tr>
+</table>
+
+<div class="rodape">
+  Sistema de Operações – Coamo &nbsp;|&nbsp; Manual do Usuário v2.0 &nbsp;|&nbsp; Outubro 2026<br>
+  TI Coamo — Gerência de Operações e Serviços de TI
+</div>
+
+</div>
+</body>
+</html>
